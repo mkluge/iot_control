@@ -5,9 +5,6 @@
 
 """
 
-import time
-import yaml
-import sys
 from iot_control.iotruntime import IoTRuntime
 
 if __name__ == '__main__':

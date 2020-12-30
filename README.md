@@ -21,3 +21,7 @@ Backends can set and read states if the functionality of the software used provi
 2. Make sure you habe a suitable backend that will store the data or interact with the sensors. That's why you are here, right? So maybe you have an Home Assistant installation already. Then please check that [mqtt is enabled](https://www.home-assistant.io/integrations/mqtt/). Otherwise: get one or get an InfluxDB instance.
 3. Clone this project at the device and copy the example setup to a setup.yaml and edit the content of the setup file according to your needs.
 4. Run rooftop.py. Maybe with a screen session, but much better as a service (via systemd).
+
+## I need support for more backends and more sensors
+
+Send me a message, I'll write this when its needed. It should be easy to add more of both kinds.

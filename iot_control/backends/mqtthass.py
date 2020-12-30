@@ -1,7 +1,12 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+""" backend for mqtt and Home Assistant
+"""
+
 
 import json
-from typing import Dict, List
+from typing import Dict
 from iot_control.iotbackendbase import IoTBackendBase
 from iot_control.iotdevicebase import IoTDeviceBase
 from iot_control.iotfactory import IoTFactory
@@ -11,7 +16,11 @@ import paho.mqtt.client as mqtt
 
 @IoTFactory.register_backend("mqtt_hass")
 class BackendMqttHass(IoTBackendBase):
+    """ the backend class for mqtt and Home Assistant
 
+    Args:
+        IoTBackendBase: the base class
+    """
     avail_topics = []
     state_topics = {}
     command_topics = {}
@@ -98,10 +107,11 @@ class BackendMqttHass(IoTBackendBase):
 
                             self.mqtt_client.publish(
                                 avail_topic, self.config["online_payload"])
-                        except Exception as e:
-                            print("config for sensor {} wrong: {}".format(sensor, e))
-                except:
-                    print("error announcing sensor")
+                        except Exception as exception:
+                            print("config for sensor {} wrong: {}".format(
+                                sensor, exception))
+                except Exception as exception:
+                    print("error announcing sensor: {}".format(exception))
             else:
                 # it is a switch
                 # get list of switches on device
@@ -160,30 +170,34 @@ class BackendMqttHass(IoTBackendBase):
                                 avail_topic, self.config["online_payload"])
 
                             # now subscribe to the command topic
-                            (result, mid) = self.mqtt_client.subscribe(
+                            (result, _) = self.mqtt_client.subscribe(
                                 command_topic)
                             print("subscription result: "+str(result))
                             self.command_topics[command_topic] = [
                                 device, switch, state_topic
                             ]
 
-                        except:
-                            print("error announcing switch {}".format(switch))
-                except:
-                    print("error missing config for switches")
+                        except Exception as exception:
+                            print("error announcing switch {}: {}".format(
+                                switch, exception))
+                except Exception as exception:
+                    print("error missing config for switches: {}".format(exception))
 
     # The callback for when the client receives a CONNACK response from the server.
 
-    def mqtt_callback_connect(self, client, userdata, flags, rc):
-
-        (result, mid) = self.mqtt_client.subscribe("homeassistant/status")
+    def mqtt_callback_connect(self, *client, userdata, flags, rc):
+        """ callback as defined by the mqtt API for the moment
+            when the connection is made
+        """
+        (result, _) = self.mqtt_client.subscribe("homeassistant/status")
         print("Got subscription result for " +
               "homeassistant/status"+":"+str(result))
 #        self.announce()
 
     # The callback for when a PUBLISH message is received from the server.
     def mqtt_callback_message(self, client, userdata, msg):
-
+        """ callback from mqtt in case message arrives
+        """
         if msg.topic in self.command_topics:
             payload = msg.payload.decode("utf-8")
             [device, switch, state_topic] = self.command_topics[msg.topic]
@@ -205,6 +219,7 @@ class BackendMqttHass(IoTBackendBase):
                 self.announce()
 
     def mqtt_callback_disconnect(self, client, userdata, rc):
-
+        """ mqtt callback when the client gets disconnected
+        """
         if rc != 0:
             print("Unexpected disconnection.")

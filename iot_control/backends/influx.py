@@ -1,4 +1,9 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+""" InfluxDB backend for iot_control
+"""
+
 
 import datetime
 from typing import Dict
@@ -10,7 +15,11 @@ from iot_control.iotfactory import IoTFactory
 
 @IoTFactory.register_backend("influx")
 class BackendInfluxDB(IoTBackendBase):
+    """ the backend class
 
+    Args:
+        IoTBackendBase: the base class
+    """
     devices = []
     json_templates = {}
 
@@ -25,6 +34,8 @@ class BackendInfluxDB(IoTBackendBase):
                                               database=config['database'])
 
     def register_device(self, device: IoTDeviceBase) -> None:
+        """ register a device with the backend
+        """
         self.devices.append(device)
 
     def shutdown(self):
@@ -62,10 +73,11 @@ class BackendInfluxDB(IoTBackendBase):
                                 },
                             ]
                             self.json_templates[sensor] = json_template
-                        except Exception as e:
-                            print("config for sensor {} wrong: {}".format(sensor, e))
-                except:
-                    print("error announcing sensor")
+                        except Exception as exception:
+                            print("config for sensor {} wrong: {}".format(
+                                sensor, exception))
+                except Exception as exception:
+                    print("error announcing sensor: {}".format(exception))
             else:
                 # it is a switch
                 # - not supported here

@@ -1,4 +1,4 @@
-# Control your IoT devices
+# Connect your IoT devices
 
 This project provides a framework to easily connect IoT devices (sensors and switches) with different backends. It allows to include more backends and devices.
 
@@ -14,3 +14,10 @@ Backends can set and read states if the functionality of the software used provi
 
 * [Home Assistant with MQTT discovery](https://www.home-assistant.io/docs/mqtt/discovery/): works for sensors and switches
 * [InfluxDB](https://en.wikipedia.org/wiki/InfluxDB): works for sensors only, will ignore switches
+
+## How to get started:
+
+1. Get some sensors and a small device to run the sensors on. The device should be able to run python.
+2. Make sure you habe a suitable backend that will store the data or interact with the sensors. That's why you are here, right? So maybe you have an Home Assistant installation already. Then please check that [mqtt is enabled](https://www.home-assistant.io/integrations/mqtt/). Otherwise: get one or get an InfluxDB instance.
+3. Clone this project at the device and copy the example setup to a setup.yaml and edit the content of the setup file according to your needs.
+4. Run rooftop.py. Maybe with a screen session, but much better as a service (via systemd).

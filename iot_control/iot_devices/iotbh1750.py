@@ -6,7 +6,7 @@
 """
 
 from typing import Dict
-import smbus
+import smbus2
 from iot_control.iotdevicebase import IoTDeviceBase
 from iot_control.iotfactory import IoTFactory
 
@@ -25,13 +25,13 @@ class IoTbh1750(IoTDeviceBase):
 
     def read_data(self) -> Dict:
         """ read data """
-        bus = smbus.SMBus(self.port)
+        bus = smbus2.SMBus(self.port)
+        # 0x20 = ONE_TIME_HIGH_RES_MODE_1
         # Start measurement at 1lx resolution. Time typically 120ms
         # Device is automatically set to Power Down after measurement.
-        ONE_TIME_HIGH_RES_MODE_1 = 0x20
         # Read data from I2C interface
         data = bus.read_i2c_block_data(
-            self.address, ONE_TIME_HIGH_RES_MODE_1)
+            self.address, 0x20, 16)
         result = (data[1] + (256 * data[0])) / 1.2
         val = {
             "illuminance": "{:.1f}".format(result),

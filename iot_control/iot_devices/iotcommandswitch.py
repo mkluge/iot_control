@@ -10,7 +10,7 @@ from iot_control.iotdevicebase import IoTDeviceBase, IoTConfigError
 from iot_control.iotfactory import IoTFactory
 
 
-@IoTFactory.register_device("command-switch")
+@IoTFactory.register_device("command_switch")
 class IoTcommandswitch(IoTDeviceBase):
     """ running shell commands if the switch is triggered
     """

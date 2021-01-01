@@ -75,7 +75,6 @@ class IoTRuntime:
             try:
                 real_device = IoTFactory.create_device(
                     device, config=device_cfg)
-                print(real_device)
                 self.devices.append(real_device)
                 for backend in self.backends:
                     backend.register_device(real_device)

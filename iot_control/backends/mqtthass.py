@@ -6,7 +6,9 @@
 
 
 import json
+from os import stat
 from typing import Dict
+import logging
 from iot_control.iotbackendbase import IoTBackendBase
 from iot_control.iotdevicebase import IoTDeviceBase
 from iot_control.iotfactory import IoTFactory
@@ -28,12 +30,14 @@ class BackendMqttHass(IoTBackendBase):
 
     def __init__(self, **kwargs):
         super().__init__()
+        self.logger = logging.getLogger("iot_control")
         config = kwargs.get("config", None)
         self.config = config
         self.mqtt_client = mqtt.Client()
         self.mqtt_client.on_connect = self.mqtt_callback_connect
         self.mqtt_client.on_message = self.mqtt_callback_message
         self.mqtt_client.on_disconnect = self.mqtt_callback_disconnect
+        self.logger("connection to mqtt server")
         self.mqtt_client.connect(
             self.config['server'], self.config['port'], 60)
         self.mqtt_client.loop_start()
@@ -46,6 +50,7 @@ class BackendMqttHass(IoTBackendBase):
         self.devices.append(device)
 
     def shutdown(self):
+        self.logger.info("shutdown mqtt connection")
         for avail_topic in self.avail_topics:
             self.mqtt_client.publish(avail_topic, self.config.offline_payload)
         self.mqtt_client.disconnect()
@@ -56,6 +61,8 @@ class BackendMqttHass(IoTBackendBase):
             if entry in self.state_topics:
                 val = {entry: data[entry]}
                 state_topic = self.state_topics[entry]
+                self.logger.debug(
+                    "new mqtt value for %s : %s", state_topic, val)
                 self.mqtt_client.publish(state_topic, json.dumps(val))
 
     def announce(self):
@@ -68,6 +75,7 @@ class BackendMqttHass(IoTBackendBase):
                 try:
                     sensor_cfg = device.conf["sensors"]
                     for sensor in sensors:
+                        self.logger.info("mqtt announcing sensor %s", sensor)
                         try:
                             sconf = sensor_cfg[sensor]
                             config_topic = "{}/sensor/{}/{}/config".format(
@@ -95,23 +103,21 @@ class BackendMqttHass(IoTBackendBase):
                             }
                             payload = json.dumps(conf_dict)
 
-                            print("publishing: {}".format(payload))
+                            self.logger.info("publishing: %s", payload)
                             result = self.mqtt_client.publish(
                                 config_topic, payload)
-                            print("wait for publish")
                             result.wait_for_publish()
-                            print("publish ")
                             if result.rc != mqtt.MQTT_ERR_SUCCESS:
-                                print("unable to publish")
-                            print(result)
+                                self.logger.error("unable to publish")
 
                             self.mqtt_client.publish(
                                 avail_topic, self.config["online_payload"])
                         except Exception as exception:
-                            print("config for sensor {} wrong: {}".format(
-                                sensor, exception))
+                            self.logger.error("config for sensor %s wrong: %s",
+                                              sensor, exception)
                 except Exception as exception:
-                    print("error announcing sensor: {}".format(exception))
+                    self.logger.error(
+                        "error announcing sensor: %s", exception)
             else:
                 # it is a switch
                 # get list of switches on device
@@ -121,8 +127,9 @@ class BackendMqttHass(IoTBackendBase):
                     switches_cfg = device.conf["names"]
                     for switch in switches:
                         try:
+                            self.logger.info(
+                                "mqtt announcing switch %s", switch)
                             sconf = switches_cfg[switch]
-                            print(sconf)
                             config_topic = "{}/switch/{}/{}/config".format(
                                 self.config["hass_discovery_prefix"],
                                 sconf["unique_id"], switch)
@@ -156,15 +163,12 @@ class BackendMqttHass(IoTBackendBase):
                             }
                             payload = json.dumps(conf_dict)
 
-                            print("publishing: {}".format(payload))
+                            self.logger.info("publishing: %s", payload)
                             result = self.mqtt_client.publish(
                                 config_topic, payload)
-                            print("wait for publish")
                             result.wait_for_publish()
-                            print("published")
                             if result.rc != mqtt.MQTT_ERR_SUCCESS:
-                                print("publish result not OK")
-                            print(result)
+                                self.logger.error("publish result not OK")
 
                             self.mqtt_client.publish(
                                 avail_topic, self.config["online_payload"])
@@ -172,16 +176,17 @@ class BackendMqttHass(IoTBackendBase):
                             # now subscribe to the command topic
                             (result, _) = self.mqtt_client.subscribe(
                                 command_topic)
-                            print("subscription result: "+str(result))
+                            self.logger.info(
+                                "subscription result: %s", result)
                             self.command_topics[command_topic] = [
                                 device, switch, state_topic
                             ]
-
                         except Exception as exception:
-                            print("error announcing switch {}: {}".format(
-                                switch, exception))
+                            self.logger.error("error announcing switch %s: %s",
+                                              switch, exception)
                 except Exception as exception:
-                    print("error missing config for switches: {}".format(exception))
+                    self.logger.error(
+                        "error while registering switch: %s", exception)
 
     # The callback for when the client receives a CONNACK response from the server.
 
@@ -190,8 +195,8 @@ class BackendMqttHass(IoTBackendBase):
             when the connection is made
         """
         (result, _) = self.mqtt_client.subscribe("homeassistant/status")
-        print("Got subscription result for " +
-              "homeassistant/status"+":"+str(result))
+        self.logger.info(
+            "subscription result for homeassistant/status: %s", result)
 #        self.announce()
 
     # The callback for when a PUBLISH message is received from the server.
@@ -201,8 +206,8 @@ class BackendMqttHass(IoTBackendBase):
         if msg.topic in self.command_topics:
             payload = msg.payload.decode("utf-8")
             [device, switch, state_topic] = self.command_topics[msg.topic]
-            print("calling device {}, switch {} with {}".format(
-                device, switch, payload))
+            self.logger.debug("calling device %s, switch %s with %s",
+                              device, switch, payload)
             if device.set_state({switch: payload}):
                 self.mqtt_client.publish(state_topic, msg.payload)
 
@@ -211,7 +216,7 @@ class BackendMqttHass(IoTBackendBase):
             return
 
         if msg.topic == "homeassistant/status":
-            print("home assistant status message:", msg.topic)
+            self.logger.info("home assistant status message:", msg.topic)
             # report ourselves as available to home assistant
 
             if msg.payload == b'online':
@@ -222,4 +227,4 @@ class BackendMqttHass(IoTBackendBase):
         """ mqtt callback when the client gets disconnected
         """
         if rc != 0:
-            print("Unexpected disconnection.")
+            self.logger.warning("Unexpected disconnection.")

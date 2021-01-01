@@ -35,3 +35,10 @@ class IoTDeviceBase(metaclass=ABCMeta):
     @abstractmethod
     def shutdown(self, data: Dict) -> None:
         """ Abstract method to shut down """
+
+
+class IoTConfigError(Exception):
+    """exception raised on a configuration error"""
+
+    def __init__(self, msg="error in the config file"):
+        super().__init__()

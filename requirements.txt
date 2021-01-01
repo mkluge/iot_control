@@ -1,0 +1,5 @@
+pyyaml
+rpi.bme280
+influxdb
+smbus2
+paho-mqtt

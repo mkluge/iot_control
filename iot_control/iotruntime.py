@@ -28,12 +28,12 @@ class IoTRuntime:
     devices = []
     update_intervall = 60
 
-    def __init__(self, configfile: str):
+    def __init__(self, configfile: str, log_level=logging.WARNING):
 
         self.logger = logging.getLogger('iot_control')
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(log_level)
         filehandler = logging.FileHandler('iot_control.log')
-        filehandler.setLevel(logging.INFO)
+        filehandler.setLevel(log_level)
         self.logger.addHandler(filehandler)
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')

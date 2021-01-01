@@ -185,7 +185,7 @@ class BackendMqttHass(IoTBackendBase):
 
     # The callback for when the client receives a CONNACK response from the server.
 
-    def mqtt_callback_connect(self, *client, userdata, flags, rc):
+    def mqtt_callback_connect(self, client, userdata, flags, rc):
         """ callback as defined by the mqtt API for the moment
             when the connection is made
         """

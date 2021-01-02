@@ -6,7 +6,6 @@
 
 
 import json
-from os import stat
 from typing import Dict
 import logging
 from iot_control.iotbackendbase import IoTBackendBase
@@ -37,7 +36,7 @@ class BackendMqttHass(IoTBackendBase):
         self.mqtt_client.on_connect = self.mqtt_callback_connect
         self.mqtt_client.on_message = self.mqtt_callback_message
         self.mqtt_client.on_disconnect = self.mqtt_callback_disconnect
-        self.logger("connection to mqtt server")
+        self.logger.info("connection to mqtt server")
         self.mqtt_client.connect(
             self.config['server'], self.config['port'], 60)
         self.mqtt_client.loop_start()
@@ -216,7 +215,7 @@ class BackendMqttHass(IoTBackendBase):
             return
 
         if msg.topic == "homeassistant/status":
-            self.logger.info("home assistant status message:", msg.topic)
+            self.logger.info("home assistant status message: %s", msg.topic)
             # report ourselves as available to home assistant
 
             if msg.payload == b'online':

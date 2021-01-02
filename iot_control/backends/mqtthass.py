@@ -109,10 +109,14 @@ class BackendMqttHass(IoTBackendBase):
                             if result.rc != mqtt.MQTT_ERR_SUCCESS:
                                 self.logger.error("unable to publish")
 
-                            self.mqtt_client.publish(
+                            result = self.mqtt_client.publish(
                                 avail_topic, self.config["online_payload"])
+                            result.wait_for_publish()
+                            if result.rc != mqtt.MQTT_ERR_SUCCESS:
+                                self.logger.error(
+                                    "unable to publish online information")
                         except Exception as exception:
-                            self.logger.error("config for sensor %s wrong: %s",
+                            self.logger.error("problem bringing sensor %s up: %s",
                                               sensor, exception)
                 except Exception as exception:
                     self.logger.error(

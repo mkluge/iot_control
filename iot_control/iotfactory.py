@@ -6,6 +6,7 @@
 """
 
 from typing import Callable
+import logging
 from iot_control.iotdevicebase import IoTDeviceBase
 from iot_control.iotbackendbase import IoTBackendBase
 
@@ -38,6 +39,8 @@ class IoTFactory:
             raise SystemExit(
                 'device {} does not exist in the registry'.format(name))
 
+        logger = logging.getLogger('iot_control')
+        logger.info("creating device for class %s", name)
         device_class = cls.device_registry[name]
         device = device_class(**kwargs)
         return device
@@ -62,6 +65,8 @@ class IoTFactory:
             raise SystemExit(
                 'backend class {} does not exist in the registry'.format(name))
 
+        logger = logging.getLogger('iot_control')
+        logger.info("creating backend for class %s", name)
         backend_class = cls.backend_registry[name]
         backend = backend_class(**kwargs)
         return backend

@@ -7,6 +7,7 @@
 
 import datetime
 from typing import Dict
+import logging
 import influxdb
 from iot_control.iotbackendbase import IoTBackendBase
 from iot_control.iotdevicebase import IoTDeviceBase
@@ -25,8 +26,10 @@ class BackendInfluxDB(IoTBackendBase):
 
     def __init__(self, **kwargs):
         super().__init__()
+        self.logger = logging.getLogger('iot_control')
         config = kwargs.get("config", None)
         self.config = config
+        self.logger.info("connecting to influxdb")
         self.influx = influxdb.InfluxDBClient(host=config['server'],
                                               port=config['port'],
                                               username=config['user'],
@@ -39,12 +42,15 @@ class BackendInfluxDB(IoTBackendBase):
         self.devices.append(device)
 
     def shutdown(self):
+        self.logger.info("shutdown influxdb")
         self.influx.close()
 
     def workon(self, thing: IoTDeviceBase, data: Dict):
         for entry in data:
             # send to influx db
             if entry in self.json_templates:
+                self.logger.debug("influx data for field %s with value %s",
+                                  entry, data[entry])
                 template = self.json_templates[entry]
                 template[0]["time"] = "{}".format(datetime.datetime.utcnow())
                 template[0]["fields"][entry] = data[entry]
@@ -61,6 +67,8 @@ class BackendInfluxDB(IoTBackendBase):
                     sensor_cfg = device.conf["sensors"]
                     for sensor in sensors:
                         try:
+                            self.logger.info(
+                                "influx registering sensor %s", sensor)
                             sconf = sensor_cfg[sensor]
                             json_template = [
                                 {
@@ -74,10 +82,10 @@ class BackendInfluxDB(IoTBackendBase):
                             ]
                             self.json_templates[sensor] = json_template
                         except Exception as exception:
-                            print("config for sensor {} wrong: {}".format(
-                                sensor, exception))
+                            self.logger.error("config for sensor %s wrong: %s",
+                                              sensor, exception)
                 except Exception as exception:
-                    print("error announcing sensor: {}".format(exception))
+                    self.logger.error("error announcing sensor: %s", exception)
             else:
                 # it is a switch
                 # - not supported here

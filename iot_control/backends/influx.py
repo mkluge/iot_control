@@ -49,7 +49,7 @@ class BackendInfluxDB(IoTBackendBase):
         for entry in data:
             # send to influx db
             if entry in self.json_templates:
-                self.logger.debug("influx data for field %s with value %f",
+                self.logger.debug("influx data for field %s with value %s",
                                   entry, data[entry])
                 template = self.json_templates[entry]
                 template[0]["time"] = "{}".format(datetime.datetime.utcnow())

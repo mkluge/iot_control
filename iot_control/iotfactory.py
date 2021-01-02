@@ -25,8 +25,6 @@ class IoTFactory:
         """
 
         def inner_wrapper(wrapped_class: IoTDeviceBase) -> Callable:
-            logger = logging.getLogger('iot_control')
-            logger.info("registering device class %s", name)
             cls.device_registry[name] = wrapped_class
             return wrapped_class
 
@@ -53,8 +51,6 @@ class IoTFactory:
         """
 
         def inner_wrapper(wrapped_class: IoTBackendBase) -> Callable:
-            logger = logging.getLogger('iot_control')
-            logger.info("registering backend class %s", name)
             cls.backend_registry[name] = wrapped_class
             return wrapped_class
 

@@ -55,8 +55,10 @@ class IoTcommandswitch(IoTDeviceBase):
             if msg in self.on_cmds.keys():
                 if messages[msg] == self.conf["payload_on"]:
                     os.system(self.on_cmds[msg])
+                    self.last_state[msg] = True
                 else:
                     os.system(self.off_cmds[msg])
+                    self.last_state[msg] = False
         return True
 
     def shutdown(self, _) -> None:

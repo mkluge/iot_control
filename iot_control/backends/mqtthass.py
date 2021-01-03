@@ -212,7 +212,7 @@ class BackendMqttHass(IoTBackendBase):
             self.logger.debug("calling device %s, switch %s with %s",
                               device, switch, payload)
             if device.set_state({switch: payload}):
-                self.mqtt_client.publish(state_topic, msg.payload)
+                self.mqtt_client.publish(state_topic, payload)
 
         # ignore retained messages
         if msg.retain:

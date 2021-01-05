@@ -8,6 +8,7 @@
 import json
 from typing import Dict
 import logging
+import socket
 from iot_control.iotbackendbase import IoTBackendBase
 from iot_control.iotdevicebase import IoTDeviceBase
 from iot_control.iotfactory import IoTFactory
@@ -32,7 +33,7 @@ class BackendMqttHass(IoTBackendBase):
         self.logger = logging.getLogger("iot_control")
         config = kwargs.get("config", None)
         self.config = config
-        self.mqtt_client = mqtt.Client()
+        self.mqtt_client = mqtt.Client(client_id="iot_control"+str(socket.gethostname()))
         self.mqtt_client.on_connect = self.mqtt_callback_connect
         self.mqtt_client.on_message = self.mqtt_callback_message
         self.mqtt_client.on_disconnect = self.mqtt_callback_disconnect

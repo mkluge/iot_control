@@ -43,7 +43,7 @@ class BackendInfluxDB(IoTBackendBase):
 
     def shutdown(self):
         self.logger.info("shutdown influxdb")
-        self.influx.close()
+        #self.influx.close( `) ## apparently there is no 'close()'???
 
     def workon(self, thing: IoTDeviceBase, data: Dict):
         for entry in data:

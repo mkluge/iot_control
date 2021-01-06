@@ -16,6 +16,11 @@ Backends can set and read states if the functionality of the software used provi
 * [Home Assistant with MQTT discovery](https://www.home-assistant.io/docs/mqtt/discovery/): works for sensors and switches
 * [InfluxDB](https://en.wikipedia.org/wiki/InfluxDB): works for sensors only, will ignore switches
 
+## Prerequisites
+
+* Install .deb packages: 'sudo apt install python3-influxdb python3-yaml'
+* Install  PIP packages: 'pip3 install smbus2 rpi.bme280 paho-mqtt'
+
 ## How to get started:
 
 1. Get some sensors and a small device to run the sensors on. The device should be able to run python.

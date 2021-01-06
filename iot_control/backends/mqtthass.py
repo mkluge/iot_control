@@ -37,13 +37,15 @@ class BackendMqttHass(IoTBackendBase):
         self.mqtt_client.on_message = self.mqtt_callback_message
         self.mqtt_client.on_disconnect = self.mqtt_callback_disconnect
         self.logger.info("connection to mqtt server")
+
+        if config['user'] and config['password']:
+            self.mqtt_client.username_pw_set(
+                username=config['user'], password=config['password'])
+
         self.mqtt_client.connect(
             self.config['server'], self.config['port'], 60)
         self.mqtt_client.loop_start()
 
-#        if config['user'] and config['password']:
-#            self.mqtt_client.username_pw_set(
-#                username=config['user'], password=config['password'])
 
     def register_device(self, device: IoTDeviceBase) -> None:
         self.devices.append(device)
@@ -101,7 +103,6 @@ class BackendMqttHass(IoTBackendBase):
                                 "payload_not_available": self.config["offline_payload"]
                             }
                             payload = json.dumps(conf_dict)
-
                             self.logger.info("publishing: %s", payload)
                             result = self.mqtt_client.publish(
                                 config_topic, payload)

@@ -53,7 +53,7 @@ class BackendMqttHass(IoTBackendBase):
     def shutdown(self):
         self.logger.info("shutdown mqtt connection")
         for avail_topic in self.avail_topics:
-            self.mqtt_client.publish(avail_topic, self.config.offline_payload)
+            self.mqtt_client.publish(avail_topic, self.config["offline_payload"], retain=True)
         self.mqtt_client.disconnect()
         self.mqtt_client.loop_stop()
 
@@ -64,7 +64,7 @@ class BackendMqttHass(IoTBackendBase):
                 state_topic = self.state_topics[entry]
                 self.logger.debug(
                     "new mqtt value for %s : %s", state_topic, val)
-                self.mqtt_client.publish(state_topic, json.dumps(val))
+                self.mqtt_client.publish(state_topic, json.dumps(val), retain= True)
 
     def announce(self):
         for device in self.devices:
@@ -105,17 +105,9 @@ class BackendMqttHass(IoTBackendBase):
                             payload = json.dumps(conf_dict)
                             self.logger.info("publishing: %s", payload)
                             result = self.mqtt_client.publish(
-                                config_topic, payload)
-                            result.wait_for_publish()
-                            if result.rc != mqtt.MQTT_ERR_SUCCESS:
-                                self.logger.error("unable to publish")
-
+                                config_topic, payload, retain=True)
                             result = self.mqtt_client.publish(
-                                avail_topic, self.config["online_payload"])
-                            result.wait_for_publish()
-                            if result.rc != mqtt.MQTT_ERR_SUCCESS:
-                                self.logger.error(
-                                    "unable to publish online information")
+                                avail_topic, self.config["online_payload"], retain=True)
                         except Exception as exception:
                             self.logger.error("problem bringing sensor %s up: %s",
                                               sensor, exception)
@@ -168,14 +160,8 @@ class BackendMqttHass(IoTBackendBase):
                             payload = json.dumps(conf_dict)
 
                             self.logger.info("publishing: %s", payload)
-                            result = self.mqtt_client.publish(
-                                config_topic, payload)
-                            result.wait_for_publish()
-                            if result.rc != mqtt.MQTT_ERR_SUCCESS:
-                                self.logger.error("publish result not OK")
-
-                            self.mqtt_client.publish(
-                                avail_topic, self.config["online_payload"])
+                            self.mqtt_client.publish(config_topic, payload, retain=True)
+                            self.mqtt_client.publish(avail_topic, self.config["online_payload"], retain=True)
 
                             # now subscribe to the command topic
                             (result, _) = self.mqtt_client.subscribe(
@@ -207,6 +193,7 @@ class BackendMqttHass(IoTBackendBase):
     def mqtt_callback_message(self, client, userdata, msg):
         """ callback from mqtt in case message arrives
         """
+
         if msg.topic in self.command_topics:
             payload = msg.payload.decode("utf-8")
             [device, switch, state_topic] = self.command_topics[msg.topic]
@@ -215,17 +202,15 @@ class BackendMqttHass(IoTBackendBase):
             if device.set_state({switch: payload}):
                 self.mqtt_client.publish(state_topic, payload)
 
-        # ignore retained messages
-        if msg.retain:
-            return
-
         if msg.topic == "homeassistant/status":
-            self.logger.info("home assistant status message: %s", msg.topic)
-            # report ourselves as available to home assistant
-
             if msg.payload == b'online':
-                # re-report ourselves available to home assistant and report current state
-                self.announce()
+                self.logger.info( "Home Assistant came online" )
+                # no need to re-announce myself to home assistant here because the retained 
+                # announcement messages will take care of this in a much nicer way
+            elif msg.payload == b'offline':
+                self.logger.info( "Home Assistant went offline" )
+            else:
+                self.logger.info( "unexpected home assistant status message: %s %s", msg.topic, msg.payload )
 
     def mqtt_callback_disconnect(self, client, userdata, rc):
         """ mqtt callback when the client gets disconnected

@@ -98,9 +98,19 @@ class IoTRuntime:
         """
         self.logger.info(
             "starting main loop with %d seconds intervall", int(self.update_intervall))
-        while True:
-            for device in self.devices:
-                data = device.read_data()
-                for backend in self.backends:
-                    backend.workon(device, data)
-            time.sleep(self.update_intervall)
+        try:
+          while True:
+              for device in self.devices:
+                  data = device.read_data()
+                  for backend in self.backends:
+                      backend.workon(device, data)
+              time.sleep(self.update_intervall)
+        except KeyboardInterrupt:
+            self.logger.error( "Keyboard interrupt" )
+        except:
+            self.logger.error( "unexpected error" )
+
+        for backend in self.backends:
+            backend.shutdown()
+        
+            

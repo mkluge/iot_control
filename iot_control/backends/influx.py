@@ -35,7 +35,20 @@ class BackendInfluxDB(IoTBackendBase):
                                               username=config['user'],
                                               password=config['password'],
                                               database=config['database'])
+        list= [db['name'] for db in self.influx.get_list_database()]
+        #list= self.influx.get_list_database()
+        self.logger.debug( "Connected to InfluxDB %s:%s", config['server'], config['port'] )
+        self.logger.debug( "    Existing databases:" )
+        for l in list:
+            self.logger.debug( "        '%s'", l )
 
+        if config['database'] not in list:
+            self.logger.info( "Create new Influx database '%s'", config['database'] )
+            self.influx.create_database( config['database'] )
+        else:
+            self.logger.debug( "Influx database '%s' already present", config['database'] )
+    
+  
     def register_device(self, device: IoTDeviceBase) -> None:
         """ register a device with the backend
         """

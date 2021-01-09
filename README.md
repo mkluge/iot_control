@@ -18,8 +18,10 @@ Backends can set and read states if the functionality of the software used provi
 
 ## Prerequisites
 
-* Install .deb packages: 'sudo apt install python3-influxdb python3-yaml'
-* Install  PIP packages: 'pip3 install smbus2 rpi.bme280 paho-mqtt'
+* Install .deb packages: 'sudo apt install python3-yaml'
+* Install  PIP packages: 'pip3 install smbus2 rpi.bme280 paho-mqtt influxdb'
+
+Hint: On Raspbian GNU/Linux 9.13 (stretch) don't use the .deb package 'python3-influxdb' but the much newer pip3 package 'influxdb'
 
 ## How to get started:
 

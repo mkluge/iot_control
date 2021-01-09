@@ -66,7 +66,7 @@ class BackendInfluxDB(IoTBackendBase):
                                   entry, data[entry])
                 template = self.json_templates[entry]
                 template[0]["time"] = "{}".format(datetime.datetime.utcnow())
-                template[0]["fields"][entry] = data[entry]
+                template[0]["fields"][entry] = float( data[entry] )
                 self.influx.write_points(template)
 
     def announce(self):

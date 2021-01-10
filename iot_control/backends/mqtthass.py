@@ -188,7 +188,7 @@ class BackendMqttHass(IoTBackendBase):
         (result, _) = self.mqtt_client.subscribe("homeassistant/status")
         self.logger.info(
             "subscription result for homeassistant/status: %s", result)
-#        self.announce()
+        self.announce()
 
     # The callback for when a PUBLISH message is received from the server.
     def mqtt_callback_message(self, client, userdata, msg):

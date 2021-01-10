@@ -35,7 +35,20 @@ class BackendInfluxDB(IoTBackendBase):
                                               username=config['user'],
                                               password=config['password'],
                                               database=config['database'])
+        list= [db['name'] for db in self.influx.get_list_database()]
+        #list= self.influx.get_list_database()
+        self.logger.debug( "Connected to InfluxDB %s:%s", config['server'], config['port'] )
+        self.logger.debug( "    Existing databases:" )
+        for l in list:
+            self.logger.debug( "        '%s'", l )
 
+        if config['database'] not in list:
+            self.logger.info( "Create new Influx database '%s'", config['database'] )
+            self.influx.create_database( config['database'] )
+        else:
+            self.logger.debug( "Influx database '%s' already present", config['database'] )
+    
+  
     def register_device(self, device: IoTDeviceBase) -> None:
         """ register a device with the backend
         """
@@ -43,7 +56,7 @@ class BackendInfluxDB(IoTBackendBase):
 
     def shutdown(self):
         self.logger.info("shutdown influxdb")
-        #self.influx.close( `) ## apparently there is no 'close()'???
+        self.influx.close()
 
     def workon(self, thing: IoTDeviceBase, data: Dict):
         for entry in data:
@@ -53,7 +66,7 @@ class BackendInfluxDB(IoTBackendBase):
                                   entry, data[entry])
                 template = self.json_templates[entry]
                 template[0]["time"] = "{}".format(datetime.datetime.utcnow())
-                template[0]["fields"][entry] = data[entry]
+                template[0]["fields"][entry] = float( data[entry] )
                 self.influx.write_points(template)
 
     def announce(self):

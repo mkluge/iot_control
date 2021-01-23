@@ -134,7 +134,10 @@ class IoTRuntime:
         handle= self.loop.call_soon_threadsafe(
             functools.partial(self.loop.call_later,delay,
                 functools.partial(IoTRuntime.scheduled_update,self,device,switch,event)))
-        return None
+        return None 
+        # TODO return handle, the device can use that to cancel the auto off if it gets turned off manually
+        # then it will work as expected when swiched off and on again manually -- in that case only the autooff
+        # from the second 'on' event should act but not the one from the earlier round
 
     def loop_forever(self):
         """ the main loop of the runtime

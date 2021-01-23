@@ -59,13 +59,25 @@ class BackendMqttHass(IoTBackendBase):
         self.mqtt_client.loop_stop()
 
     def workon(self, thing: IoTDeviceBase, data: Dict):
-        for entry in data:
-            if entry in self.state_topics:
-                val = {entry: data[entry]}
-                state_topic = self.state_topics[entry]
-                self.logger.debug(
-                    "new mqtt value for %s : %s", state_topic, val)
-                self.mqtt_client.publish(state_topic, json.dumps(val), retain= True)
+        if "sensors" in thing.conf:
+            for entry in data:
+                if entry in self.state_topics:
+                    val = {entry: data[entry]}
+                    state_topic = self.state_topics[entry]
+                    self.logger.debug("new mqtt value for %s : %s", state_topic, val)
+                    self.mqtt_client.publish(state_topic, json.dumps(val), retain= True)
+
+        elif "names" in thing.conf: ## TODO needs to be changed to "switches" in the code and in the config files!
+            for entry in data:
+                if entry in self.state_topics:
+                    val = data[entry]
+                    state_topic = self.state_topics[entry]
+                    self.logger.debug("new mqtt value for %s : %s", state_topic, val)
+                    self.mqtt_client.publish(state_topic, val, retain= True)
+
+        else:
+            self.logger.error("unknown device type %s", thing.conf )
+
 
     def announce(self):
         for device in self.devices:

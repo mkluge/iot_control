@@ -30,6 +30,9 @@ devices:
         unique_id: "water_relais"
         # PIN as GPIO number, not board number
         pin: 17
+        # optional auto-off timer to turn off the device off again after the given time
+        autooff: 5
+
   ads1115:
     sensors:
       # name can be chosen freely

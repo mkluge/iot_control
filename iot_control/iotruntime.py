@@ -10,6 +10,9 @@ import sys
 import logging
 import yaml
 import asyncio
+import functools
+import os
+import signal
 import iot_control.iot_devices.iotads1115
 import iot_control.iot_devices.iotbme280
 import iot_control.iot_devices.iotbh1750
@@ -94,6 +97,10 @@ class IoTRuntime:
         """
         self.update_intervall = new_intervall
 
+    def signal_handler(self,signame,loop):
+        self.logger.info("got signal %s: exit",signame)
+        loop.stop()
+
     def regular_update(self,loop):
         """ do the regular update for all passive devices
         """
@@ -113,14 +120,18 @@ class IoTRuntime:
         self.logger.info("starting main loop with %d seconds intervall",int(self.update_intervall))
         loop = asyncio.get_event_loop()
 
+        # install signal handlers for graceful exit
+        for signame in {'SIGINT', 'SIGTERM'}:
+            loop.add_signal_handler(getattr(signal, signame),
+                functools.partial(IoTRuntime.signal_handler,self,signame,loop))
+
+        # schedule regular update for the first time
         loop.call_soon(IoTRuntime.regular_update,self,loop)
 
         try:
           loop.run_forever()
-        except KeyboardInterrupt:
-            self.logger.error( "Keyboard interrupt" )
         except:
-            self.logger.error( "unexpected error" )
+            self.logger.error( "unexpected error via exception" )
         finally:
             loop.close()
 

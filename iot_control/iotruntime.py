@@ -31,6 +31,7 @@ class IoTRuntime:
     backends = []
     devices = []
     update_intervall = 60
+    loop= None
 
     def __init__(self, configfile: str, log_level=logging.WARNING):
 
@@ -114,27 +115,47 @@ class IoTRuntime:
         # reschedule myself for next time
         loop.call_later(self.update_intervall,IoTRuntime.regular_update,self,loop)
 
+    def scheduled_update(self,device,switch,event):
+        if device.set_state({switch: event}):
+            for backend in self.backends:
+                data = device.read_data()
+                backend.workon(device, data)
+    
+    def schedule_for_device(self,delay,device,switch,event):
+        
+        if None == self.loop:
+            self.logger.error("no event loop created, must not call 'IoTRuntime.schedule_for_device()' yet")
+            return None
+       
+        # this may look strange but needs to be that way! This function 'schedule_for_device()' is likely called 
+        # from other threads such as an MQTT handler. That's why 'call_soon_threadsafe()' is scheduling the 
+        # following step in the thread of the main event loop soon. And then 'call_later(delay,...)' get's
+        # properly scheduled over there in the thread of the main event loop.
+        handle= self.loop.call_soon_threadsafe(
+            functools.partial(self.loop.call_later,delay,
+                functools.partial(IoTRuntime.scheduled_update,self,device,switch,event)))
+        return None
 
     def loop_forever(self):
         """ the main loop of the runtime
         """
         self.logger.info("starting main loop with %d seconds intervall",int(self.update_intervall))
-        loop = asyncio.get_event_loop()
+        self.loop = asyncio.get_event_loop()
 
         # install signal handlers for graceful exit
         for signame in {'SIGINT', 'SIGTERM'}:
-            loop.add_signal_handler(getattr(signal, signame),
-                functools.partial(IoTRuntime.signal_handler,self,signame,loop))
+            self.loop.add_signal_handler(getattr(signal, signame),
+                functools.partial(IoTRuntime.signal_handler,self,signame,self.loop))
 
         # schedule regular update for the first time
-        loop.call_soon(IoTRuntime.regular_update,self,loop)
+        self.loop.call_soon(IoTRuntime.regular_update,self,self.loop)
 
         try:
-          loop.run_forever()
+          self.loop.run_forever()
         except:
             self.logger.error( "unexpected error via exception" )
         finally:
-            loop.close()
+            self.loop.close()
 
         for backend in self.backends:
             backend.shutdown()

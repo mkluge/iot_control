@@ -1,6 +1,9 @@
 # standard setup file name, might contain passwords
 setup.yaml
 
+# SytemV service file
+rooftop.service
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -9,6 +9,7 @@ import time
 import sys
 import logging
 import yaml
+import asyncio
 import iot_control.iot_devices.iotads1115
 import iot_control.iot_devices.iotbme280
 import iot_control.iot_devices.iotbh1750
@@ -93,22 +94,35 @@ class IoTRuntime:
         """
         self.update_intervall = new_intervall
 
+    def regular_update(self,loop):
+        """ do the regular update for all passive devices
+        """
+        self.logger.debug("iotruntime.regular_update()")
+        for device in self.devices:
+            data = device.read_data()
+            for backend in self.backends:
+                backend.workon(device, data)
+
+        # reschedule myself for next time
+        loop.call_later(self.update_intervall,IoTRuntime.regular_update,self,loop)
+
+
     def loop_forever(self):
         """ the main loop of the runtime
         """
-        self.logger.info(
-            "starting main loop with %d seconds intervall", int(self.update_intervall))
+        self.logger.info("starting main loop with %d seconds intervall",int(self.update_intervall))
+        loop = asyncio.get_event_loop()
+
+        loop.call_soon(IoTRuntime.regular_update,self,loop)
+
         try:
-          while True:
-              for device in self.devices:
-                  data = device.read_data()
-                  for backend in self.backends:
-                      backend.workon(device, data)
-              time.sleep(self.update_intervall)
+          loop.run_forever()
         except KeyboardInterrupt:
             self.logger.error( "Keyboard interrupt" )
         except:
             self.logger.error( "unexpected error" )
+        finally:
+            loop.close()
 
         for backend in self.backends:
             backend.shutdown()

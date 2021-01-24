@@ -16,9 +16,15 @@ class IoTDeviceBase(metaclass=ABCMeta):
 
     # each thing will have a config dict
     conf = {}
+    runtime= None
 
     def __init__(self, **kwargs):
         """ Constructor """
+
+    def give_runtime_reference(self,runtime) -> None:
+        """ initialize the reference to the runtime object. This is only needed for devices
+        which want to schedule events by themselves. All others don't need to know about this one"""
+        self.runtime= runtime
 
     @abstractmethod
     def read_data(self) -> Dict:

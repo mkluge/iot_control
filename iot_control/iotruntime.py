@@ -9,6 +9,10 @@ import time
 import sys
 import logging
 import yaml
+import asyncio
+import functools
+import os
+import signal
 import iot_control.iot_devices.iotads1115
 import iot_control.iot_devices.iotbme280
 import iot_control.iot_devices.iotbh1750
@@ -27,6 +31,7 @@ class IoTRuntime:
     backends = []
     devices = []
     update_intervall = 60
+    loop= None
 
     def __init__(self, configfile: str, log_level=logging.WARNING):
 
@@ -75,6 +80,7 @@ class IoTRuntime:
             try:
                 real_device = IoTFactory.create_device(
                     device, config=device_cfg)
+                real_device.give_runtime_reference(self)
                 self.devices.append(real_device)
                 for backend in self.backends:
                     backend.register_device(real_device)
@@ -93,22 +99,66 @@ class IoTRuntime:
         """
         self.update_intervall = new_intervall
 
+    def signal_handler(self,signame,loop):
+        self.logger.info("got signal %s: exit",signame)
+        loop.stop()
+
+    def regular_update(self,loop):
+        """ do the regular update for all passive devices
+        """
+        self.logger.debug("iotruntime.regular_update()")
+        for device in self.devices:
+            data = device.read_data()
+            for backend in self.backends:
+                backend.workon(device, data)
+
+        # reschedule myself for next time
+        loop.call_later(self.update_intervall,IoTRuntime.regular_update,self,loop)
+
+    def scheduled_update(self,device,switch,event):
+        if device.set_state({switch: event}):
+            for backend in self.backends:
+                data = device.read_data()
+                backend.workon(device, data)
+    
+    def schedule_for_device(self,delay,device,switch,event):
+        
+        if None == self.loop:
+            self.logger.error("no event loop created, must not call 'IoTRuntime.schedule_for_device()' yet")
+            return None
+       
+        # this may look strange but needs to be that way! This function 'schedule_for_device()' is likely called 
+        # from other threads such as an MQTT handler. That's why 'call_soon_threadsafe()' is scheduling the 
+        # following step in the thread of the main event loop soon. And then 'call_later(delay,...)' get's
+        # properly scheduled over there in the thread of the main event loop.
+        handle= self.loop.call_soon_threadsafe(
+            functools.partial(self.loop.call_later,delay,
+                functools.partial(IoTRuntime.scheduled_update,self,device,switch,event)))
+        return None 
+        # TODO return handle, the device can use that to cancel the auto off if it gets turned off manually
+        # then it will work as expected when swiched off and on again manually -- in that case only the autooff
+        # from the second 'on' event should act but not the one from the earlier round
+
     def loop_forever(self):
         """ the main loop of the runtime
         """
-        self.logger.info(
-            "starting main loop with %d seconds intervall", int(self.update_intervall))
+        self.logger.info("starting main loop with %d seconds intervall",int(self.update_intervall))
+        self.loop = asyncio.get_event_loop()
+
+        # install signal handlers for graceful exit
+        for signame in {'SIGINT', 'SIGTERM'}:
+            self.loop.add_signal_handler(getattr(signal, signame),
+                functools.partial(IoTRuntime.signal_handler,self,signame,self.loop))
+
+        # schedule regular update for the first time
+        self.loop.call_soon(IoTRuntime.regular_update,self,self.loop)
+
         try:
-          while True:
-              for device in self.devices:
-                  data = device.read_data()
-                  for backend in self.backends:
-                      backend.workon(device, data)
-              time.sleep(self.update_intervall)
-        except KeyboardInterrupt:
-            self.logger.error( "Keyboard interrupt" )
+          self.loop.run_forever()
         except:
-            self.logger.error( "unexpected error" )
+            self.logger.error( "unexpected error via exception" )
+        finally:
+            self.loop.close()
 
         for backend in self.backends:
             backend.shutdown()

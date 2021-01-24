@@ -6,6 +6,7 @@
 
 from typing import Dict
 import RPi.GPIO as GPIO
+import logging
 from iot_control.iotdevicebase import IoTDeviceBase
 from iot_control.iotfactory import IoTFactory
 
@@ -28,6 +29,14 @@ class IoTraspigpio(IoTDeviceBase):
         self.conf = setupdata
         GPIO.setmode(GPIO.BCM)  # GPIO Nummern statt Board Nummern
         GPIO.setwarnings(False)
+
+        # transition code: make sure the old version with 'names' instead of 
+        # 'switches' in setup.yaml is also accepted TODO: delete some time in the future
+        if "names" in setupdata:
+            logger = logging.getLogger("iot_control")
+            logger.info("PLEASE UPDATE: Your setup.yaml uses 'names' instead of 'switches' in the raspi-gpio section.")
+            setupdata["switches"]= setupdata["names"]
+
         switches_cfg = setupdata["switches"]
         for switch in switches_cfg:
             cfg = switches_cfg[switch]

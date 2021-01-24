@@ -120,6 +120,10 @@ class IoTRuntime:
             for backend in self.backends:
                 data = device.read_data()
                 backend.workon(device, data)
+
+    def __schedule_from_local_thread(self,delay,device,switch,event):
+        handle= self.loop.call_later(delay,functools.partial(IoTRuntime.scheduled_update,self,device,switch,event))
+        device.give_scheduled_event_handle(handle)
     
     def schedule_for_device(self,delay,device,switch,event):
         
@@ -131,13 +135,9 @@ class IoTRuntime:
         # from other threads such as an MQTT handler. That's why 'call_soon_threadsafe()' is scheduling the 
         # following step in the thread of the main event loop soon. And then 'call_later(delay,...)' get's
         # properly scheduled over there in the thread of the main event loop.
-        handle= self.loop.call_soon_threadsafe(
-            functools.partial(self.loop.call_later,delay,
-                functools.partial(IoTRuntime.scheduled_update,self,device,switch,event)))
-        return None 
-        # TODO return handle, the device can use that to cancel the auto off if it gets turned off manually
-        # then it will work as expected when swiched off and on again manually -- in that case only the autooff
-        # from the second 'on' event should act but not the one from the earlier round
+        self.loop.call_soon_threadsafe(
+            functools.partial(IoTRuntime.__schedule_from_local_thread,self,delay,device,switch,event))
+        
 
     def loop_forever(self):
         """ the main loop of the runtime

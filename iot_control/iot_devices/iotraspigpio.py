@@ -18,6 +18,9 @@ class IoTraspigpio(IoTDeviceBase):
     # stores mapping of names to pins
     names = {}
     autooff= 0
+    
+    # handle for a pending autooff event
+    handle= None
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -34,6 +37,9 @@ class IoTraspigpio(IoTDeviceBase):
             GPIO.setup(pin, GPIO.OUT)  # GPIO Modus zuweisen
             self.names[name] = pin
 
+    def give_scheduled_event_handle(self,handle) -> None:
+        self.handle= handle
+  
     def read_data(self) -> Dict:
         """ read data """
         val = {}
@@ -58,8 +64,15 @@ class IoTraspigpio(IoTDeviceBase):
                     GPIO.output(pin, GPIO.HIGH)
                     if 0 != self.autooff:
                         self.runtime.schedule_for_device(self.autooff,self,msg,self.conf["payload_off"])
-                else:
+                elif messages[msg] == self.conf["payload_off"]:
                     GPIO.output(pin, GPIO.LOW)
+                    if 0 != self.autooff and None != self.handle:
+                        self.handle.cancel()
+                        self.handle= None
+                else:
+                  # unknown event
+                  pass
+                    
         return True
 
     def shutdown(self, _) -> None:

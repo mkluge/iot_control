@@ -17,7 +17,7 @@ class IoTraspigpio(IoTDeviceBase):
 
     # stores mapping of names to pins
     names = {}
-    autooff= 0
+    autooff = 0
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -30,7 +30,7 @@ class IoTraspigpio(IoTDeviceBase):
             cfg = names_cfg[name]
             pin = cfg["pin"]
             if "autooff" in cfg:
-                self.autooff= cfg["autooff"]
+                self.autooff = cfg["autooff"]
             GPIO.setup(pin, GPIO.OUT)  # GPIO Modus zuweisen
             self.names[name] = pin
 
@@ -56,8 +56,9 @@ class IoTraspigpio(IoTDeviceBase):
                 GPIO.setup(pin, GPIO.OUT)
                 if messages[msg] == self.conf["payload_on"]:
                     GPIO.output(pin, GPIO.HIGH)
-                    if 0 != self.autooff:
-                        self.runtime.schedule_for_device(self.autooff,self,msg,self.conf["payload_off"])
+                    if self.autooff > 0:
+                        self.runtime.schedule_for_device(
+                            self.autooff, self, msg, self.conf["payload_off"])
                 else:
                     GPIO.output(pin, GPIO.LOW)
         return True

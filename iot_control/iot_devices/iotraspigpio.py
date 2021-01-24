@@ -85,4 +85,7 @@ class IoTraspigpio(IoTDeviceBase):
         return True
 
     def shutdown(self, _) -> None:
-        """ nothing to do """
+        """ Make sure to switch off the GPIO pin """
+        for switch in self.switches:
+            pin = self.switches[switch]
+            GPIO.output(pin, GPIO.LOW)

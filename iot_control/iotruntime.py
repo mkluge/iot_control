@@ -160,6 +160,9 @@ class IoTRuntime:
         finally:
             self.loop.close()
 
+        for device in self.devices:
+            device.shutdown(None)
+
         for backend in self.backends:
             backend.shutdown()
         

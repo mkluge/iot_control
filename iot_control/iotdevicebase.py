@@ -16,15 +16,15 @@ class IoTDeviceBase(metaclass=ABCMeta):
 
     # each thing will have a config dict
     conf = {}
-    runtime= None
+    runtime = None
 
     def __init__(self, **kwargs):
         """ Constructor """
 
-    def give_runtime_reference(self,runtime) -> None:
+    def give_runtime_reference(self, runtime) -> None:
         """ initialize the reference to the runtime object. This is only needed for devices
         which want to schedule events by themselves. All others don't need to know about this one"""
-        self.runtime= runtime
+        self.runtime = runtime
 
     def give_scheduled_event_handle(self,handle) -> None:
         """ give the handle for a scheduled event back to the device after it was schedules by IoTRuntime.

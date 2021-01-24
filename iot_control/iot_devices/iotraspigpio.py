@@ -18,10 +18,10 @@ class IoTraspigpio(IoTDeviceBase):
 
     # stores mapping of switches to pins
     switches = {}
-    autooff= 0
+    autooff = 0
     
     # handle for a pending autooff event
-    handle= None
+    handle = None
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -42,7 +42,7 @@ class IoTraspigpio(IoTDeviceBase):
             cfg = switches_cfg[switch]
             pin = cfg["pin"]
             if "autooff" in cfg:
-                self.autooff= cfg["autooff"]
+                self.autooff = cfg["autooff"]
             GPIO.setup(pin, GPIO.OUT)  # GPIO Modus zuweisen
             self.switches[switch] = pin
 
@@ -71,8 +71,9 @@ class IoTraspigpio(IoTDeviceBase):
                 GPIO.setup(pin, GPIO.OUT)
                 if messages[msg] == self.conf["payload_on"]:
                     GPIO.output(pin, GPIO.HIGH)
-                    if 0 != self.autooff:
-                        self.runtime.schedule_for_device(self.autooff,self,msg,self.conf["payload_off"])
+                    if self.autooff > 0:
+                        self.runtime.schedule_for_device(
+                            self.autooff, self, msg, self.conf["payload_off"])
                 elif messages[msg] == self.conf["payload_off"]:
                     GPIO.output(pin, GPIO.LOW)
                     if 0 != self.autooff and None != self.handle:

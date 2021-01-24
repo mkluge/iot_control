@@ -5,14 +5,12 @@
 
 """
 
-import time
 import sys
 import logging
-import yaml
 import asyncio
 import functools
-import os
 import signal
+import yaml
 import iot_control.iot_devices.iotads1115
 import iot_control.iot_devices.iotbme280
 import iot_control.iot_devices.iotbh1750
@@ -31,7 +29,7 @@ class IoTRuntime:
     backends = []
     devices = []
     update_intervall = 60
-    loop= None
+    loop = None
 
     def __init__(self, configfile: str, log_level=logging.WARNING):
 
@@ -99,11 +97,17 @@ class IoTRuntime:
         """
         self.update_intervall = new_intervall
 
-    def signal_handler(self,signame,loop):
-        self.logger.info("got signal %s: exit",signame)
+    def signal_handler(self, signame, loop):
+        """ catches signals and finishes the main loop
+
+        Args:
+            signame: the incoming signal
+            loop: reference to the loop
+        """
+        self.logger.info("got signal %s: exit", signame)
         loop.stop()
 
-    def regular_update(self,loop):
+    def regular_update(self, loop):
         """ do the regular update for all passive devices
         """
         self.logger.debug("iotruntime.regular_update()")
@@ -113,21 +117,52 @@ class IoTRuntime:
                 backend.workon(device, data)
 
         # reschedule myself for next time
-        loop.call_later(self.update_intervall,IoTRuntime.regular_update,self,loop)
+        loop.call_later(self.update_intervall,
+                        IoTRuntime.regular_update, self, loop)
 
-    def scheduled_update(self,device,switch,event):
+    def scheduled_update(self, device, switch, event):
+        """ handler for updates, call from the main event handler
+
+        Args:
+            device (IOTdevicebase): the device
+            switch (str): the switch on the device
+            event (str): the message to send
+        """
         if device.set_state({switch: event}):
             for backend in self.backends:
                 data = device.read_data()
                 backend.workon(device, data)
 
+
     def __schedule_from_local_thread(self,delay,device,switch,event):
+        """ private helper method to schedule a future event from the local thread 
+            (the thread belonging to the event loop) and pass the handle for the 
+            delayed event back to the device
+
+        Args:
+            delay (int): delay when this should be send in seconds
+            device (IOTdevicebase): the device
+            switch (str): the switch name on the device
+            event (str): which text to send
+
+        """
+
         handle= self.loop.call_later(delay,functools.partial(IoTRuntime.scheduled_update,self,device,switch,event))
         device.give_scheduled_event_handle(handle)
     
     def schedule_for_device(self,delay,device,switch,event):
+        """ Schedule an event for a device, mainly to be used with
+            mqtt
+
+        Args:
+            delay (int): delay when this should be send in seconds
+            device (IOTdevicebase): the device
+            switch (str): the switch name on the device
+            event (str): which text to send
+
+        """
         
-        if None == self.loop:
+        if self.loop is None:
             self.logger.error("no event loop created, must not call 'IoTRuntime.schedule_for_device()' yet")
             return None
        
@@ -138,25 +173,25 @@ class IoTRuntime:
         self.loop.call_soon_threadsafe(
             functools.partial(IoTRuntime.__schedule_from_local_thread,self,delay,device,switch,event))
         
-
     def loop_forever(self):
         """ the main loop of the runtime
         """
-        self.logger.info("starting main loop with %d seconds intervall",int(self.update_intervall))
+        self.logger.info(
+            "starting main loop with %d seconds intervall", int(self.update_intervall))
         self.loop = asyncio.get_event_loop()
 
         # install signal handlers for graceful exit
         for signame in {'SIGINT', 'SIGTERM'}:
             self.loop.add_signal_handler(getattr(signal, signame),
-                functools.partial(IoTRuntime.signal_handler,self,signame,self.loop))
+                                         functools.partial(IoTRuntime.signal_handler, self, signame, self.loop))
 
         # schedule regular update for the first time
-        self.loop.call_soon(IoTRuntime.regular_update,self,self.loop)
+        self.loop.call_soon(IoTRuntime.regular_update, self, self.loop)
 
         try:
-          self.loop.run_forever()
+            self.loop.run_forever()
         except:
-            self.logger.error( "unexpected error via exception" )
+            self.logger.error("unexpected error via exception")
         finally:
             self.loop.close()
 
@@ -165,5 +200,3 @@ class IoTRuntime:
 
         for backend in self.backends:
             backend.shutdown()
-        
-            

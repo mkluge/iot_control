@@ -67,7 +67,7 @@ class BackendMqttHass(IoTBackendBase):
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
                     self.mqtt_client.publish(state_topic, json.dumps(val), retain= True)
 
-        elif "names" in thing.conf: ## TODO needs to be changed to "switches" in the code and in the config files!
+        elif "switches" in thing.conf:
             for entry in data:
                 if entry in self.state_topics:
                     val = data[entry]
@@ -133,7 +133,7 @@ class BackendMqttHass(IoTBackendBase):
                 switches = device.sensor_list()
                 # create a state topic for everyone
                 try:
-                    switches_cfg = device.conf["names"]
+                    switches_cfg = device.conf["switches"]
                     for switch in switches:
                         try:
                             self.logger.info(

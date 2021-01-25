@@ -23,8 +23,8 @@ class IoTcommandswitch(IoTDeviceBase):
         super().__init__()
         setupdata = kwargs.get("config")
         self.conf = setupdata
-        for switch in self.conf["names"]:
-            sw_cfg = self.conf["names"][switch]
+        for switch in self.conf["switches"]:
+            sw_cfg = self.conf["switches"][switch]
             if not "on_command" in sw_cfg:
                 raise IoTConfigError(
                     "on_command should be set for switch {}".format(switch))
@@ -39,12 +39,12 @@ class IoTcommandswitch(IoTDeviceBase):
     def read_data(self) -> Dict:
         """ read data """
         val = {}
-        for name in self.on_cmds:
-            if self.last_state[name]:
+        for switch in self.on_cmds:
+            if self.last_state[switch]:
                 payload = self.conf["payload_on"]
             else:
                 payload = self.conf["payload_off"]
-            val[name] = payload
+            val[switch] = payload
         return val
 
     def sensor_list(self) -> list:

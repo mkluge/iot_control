@@ -24,7 +24,7 @@ devices:
   raspi-gpio:
     payload_off: "off"
     payload_on: "on"
-    names:
+    switches:
       relais-pumpe:
         name: Relay Rooftop
         unique_id: "water_relais"

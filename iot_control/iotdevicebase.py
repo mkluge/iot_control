@@ -26,6 +26,10 @@ class IoTDeviceBase(metaclass=ABCMeta):
         which want to schedule events by themselves. All others don't need to know about this one"""
         self.runtime = runtime
 
+    def give_scheduled_event_handle(self,handle) -> None:
+        """ give the handle for a scheduled event back to the device after it was schedules by IoTRuntime.
+        Ignore by default, overwrite if concrete class want's to do something with it"""
+
     @abstractmethod
     def read_data(self) -> Dict:
         """ Abstract method to read data """

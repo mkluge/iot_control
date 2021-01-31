@@ -16,6 +16,7 @@ import iot_control.iot_devices.iotbme280
 import iot_control.iot_devices.iotbh1750
 import iot_control.iot_devices.iotraspigpio
 import iot_control.iot_devices.iotcommandswitch
+import iot_control.iot_devices.iotbinarysensor
 import iot_control.backends.influx
 import iot_control.backends.mqtthass
 from iot_control.iotfactory import IoTFactory

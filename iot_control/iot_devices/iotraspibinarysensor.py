@@ -11,8 +11,8 @@ from iot_control.iotdevicebase import IoTDeviceBase
 from iot_control.iotfactory import IoTFactory
 
 
-@IoTFactory.register_device("binary-sensor")
-class IoTbinarysensor(IoTDeviceBase):
+@IoTFactory.register_device("raspi-binary-sensor")
+class IoTraspibinarysensor(IoTDeviceBase):
     """ binary sensor class to act upon an input GPIO pin on a Raspi
     """
 

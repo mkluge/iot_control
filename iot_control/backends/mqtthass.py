@@ -75,12 +75,23 @@ class BackendMqttHass(IoTBackendBase):
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
                     self.mqtt_client.publish(state_topic, val, retain= True)
 
+        elif "binary-sensors" in thing.conf:
+          
+            for entry in data:
+                if entry in self.state_topics:
+                    val = data[entry]
+                    state_topic = self.state_topics[entry]
+                    self.logger.debug("new mqtt value for %s : %s", state_topic, val)
+                    self.mqtt_client.publish(state_topic, val, retain= True)
+
         else:
-            self.logger.error("unknown device type %s", thing.conf )
+            self.logger.error("workon(): unknown device type %s", thing.conf )
 
 
     def announce(self):
+
         for device in self.devices:
+
             # is it a sensor or a switch
             if "sensors" in device.conf:
                 # get list of sensors on device
@@ -127,8 +138,8 @@ class BackendMqttHass(IoTBackendBase):
                 except Exception as exception:
                     self.logger.error(
                         "error announcing sensor: %s", exception)
-            else:
-                # it is a switch
+            elif "switches" in device.conf:
+
                 # get list of switches on device
                 switches = device.sensor_list()
                 # create a state topic for everyone
@@ -190,6 +201,54 @@ class BackendMqttHass(IoTBackendBase):
                 except Exception as exception:
                     self.logger.error(
                         "error while registering switch: %s", exception)
+
+            elif "binary-sensors" in device.conf:
+
+                # get list of sensors on device
+                sensors = device.conf["binary-sensors"]
+                # create a state topic for everyone
+                try:
+                    sensor_cfg = device.conf["binary-sensors"]
+                    for sensor in sensors:
+                        self.logger.info("mqtt announcing sensor %s", sensor)
+                        try:
+                            sconf = sensor_cfg[sensor]
+                            config_topic = "{}/binary_sensor/{}/{}/config".format(
+                                self.config["hass_discovery_prefix"],
+                                sconf["unique_id"], sensor)
+                            state_topic = "{}/binary_sensor/{}/state".format(
+                                self.config["hass_discovery_prefix"],
+                                sconf["unique_id"])
+                            avail_topic = "{}/binary_sensor/{}/avail".format(
+                                self.config["hass_discovery_prefix"],
+                                sconf["unique_id"])
+                            self.avail_topics.append(avail_topic)
+                            self.state_topics[sensor] = state_topic
+                            conf_dict = {
+                                "device_class": sconf["device_class"],
+                                "name": sconf["name"],
+                                "unique_id": sconf["unique_id"],
+                                "state_topic": state_topic,
+                                "availability_topic": avail_topic,
+                                "device_class": sconf["device_class"],
+                                "payload_available": self.config["online_payload"],
+                                "payload_not_available": self.config["offline_payload"]
+                            }
+                            payload = json.dumps(conf_dict)
+                            self.logger.info("publishing: %s", payload)
+                            result = self.mqtt_client.publish(
+                                config_topic, payload, retain=True)
+                            result = self.mqtt_client.publish(
+                                avail_topic, self.config["online_payload"], retain=True)
+                        except Exception as exception:
+                            self.logger.error("problem bringing sensor %s up: %s",
+                                              sensor, exception)
+                except Exception as exception:
+                    self.logger.error(
+                        "error announcing sensor: %s", exception)
+  
+            else:
+                self.logger.error( "announce(): unknown device type %s", device.conf )
 
     # The callback for when the client receives a CONNACK response from the server.
 

@@ -23,16 +23,12 @@ class IoTbinarysensor(IoTDeviceBase):
     handle = None
 
     def __callback(self, pin, state, cfg):
-        """ The real callback function actin upon a state change of one of the GPIO pins """
-        print( "__callback:" )
-        print( "    pin:", pin )
-        print( "    state:", state )
-        print( "    cfg:", cfg )
+        """ The real callback function acting upon a state change of one of the GPIO pins """
+        self.runtime.trigger_for_device(self)
 
     def __init__(self, **kwargs):
         super().__init__()
         setupdata = kwargs.get("config")
-        print("new IoTbinarysensor: ", setupdata)
         self.conf = setupdata
         GPIO.setmode(GPIO.BCM)  # GPIO Nummern statt Board Nummern
         GPIO.setwarnings(False)
@@ -42,9 +38,7 @@ class IoTbinarysensor(IoTDeviceBase):
         def callback( pin ):
             """ Helper callback function providing all the interesting arguments that the stupid API of 
             GPIO.add_event_detect() doesn't like to give us"""
-            #print( "callback on ", pin )
             for sensor in sensors_cfg:
-                #print( "try sensor ", sensor )
                 if "pin" in sensors_cfg[sensor] and sensors_cfg[sensor]["pin"] == pin:
                     self.__callback(pin, not GPIO.input(pin), sensors_cfg[sensor])
 
@@ -77,8 +71,8 @@ class IoTbinarysensor(IoTDeviceBase):
         return self.sensors.keys()
 
     def set_state(self, messages: Dict) -> bool:
-        print( "IoTbinarysensor.set_state() cannot act on messages", messages)
-        return False # True
+        """ should not happen because this device won't accept a state change """
+        return False 
 
     def shutdown(self, _) -> None:
         """ Don't need to clean up for input pins """

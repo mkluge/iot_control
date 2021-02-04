@@ -16,6 +16,7 @@ import iot_control.iot_devices.iotbme280
 import iot_control.iot_devices.iotbh1750
 import iot_control.iot_devices.iotraspigpio
 import iot_control.iot_devices.iotcommandswitch
+import iot_control.iot_devices.iotraspibinarysensor
 import iot_control.backends.influx
 import iot_control.backends.mqtthass
 from iot_control.iotfactory import IoTFactory
@@ -173,6 +174,34 @@ class IoTRuntime:
         self.loop.call_soon_threadsafe(
             functools.partial(IoTRuntime.__schedule_from_local_thread,self,delay,device,switch,event))
         
+    def triggered_update(self, device):
+        """ handler for trigger_for_device(), call from the main event handler
+
+        Args:
+            device (IOTdevicebase): the device
+            switch (str): the switch on the device
+            event (str): the message to send
+        """
+        for backend in self.backends:
+            data = device.read_data()
+            backend.workon(device, data)
+
+    def trigger_for_device(self,device):
+        """ Act on notification by a device, like schedule_for_device() but without a delay,
+            it makes the runtime call workon() for this device, mainly to be used with mqtt
+
+        Args:
+            device (IOTdevicebase): the device
+        """
+        if self.loop is None:
+            self.logger.error("no event loop created, must not call 'IoTRuntime.schedule_for_device()' yet")
+            return None
+       
+        # This get's (most likely) called from another thread such as a GPIO callback thread but
+        # not the thread where self.loop lives in. Therefore, the following call makes self.loop()
+        # to call self.trigger_for_device() soon inside the thread of self.loop
+        self.loop.call_soon_threadsafe(functools.partial(IoTRuntime.triggered_update,self,device))
+
     def loop_forever(self):
         """ the main loop of the runtime
         """

@@ -83,3 +83,17 @@ devices:
         unique_id: "pressure_rooftop"
         unit_of_measurement: "hPa"
         expire_after: 370
+raspi-binary-sensor:
+    payload_off: "OFF"
+    payload_on: "ON"
+    binary-sensors:
+      button:
+        name: Button
+        unique_id: "button"
+        device_class: door  # device class according to https://www.home-assistant.io/integrations/binary_sensor/#device-class
+        pin: 15 # PIN as GPIO number, not board number
+      anotherbutton:
+        name: Anotherbutton
+        unique_id: "button2"
+        device_class: window  # device class according to https://www.home-assistant.io/integrations/binary_sensor/#device-class
+        pin: 18 # PIN as GPIO number, not board number

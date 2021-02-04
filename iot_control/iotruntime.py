@@ -149,7 +149,7 @@ class IoTRuntime:
         """
 
         handle= self.loop.call_later(delay,functools.partial(IoTRuntime.scheduled_update,self,device,switch,event))
-        device.give_scheduled_event_handle(handle)
+        device.give_scheduled_event_handle(handle,switch)
     
     def schedule_for_device(self,delay,device,switch,event):
         """ Schedule an event for a device, mainly to be used with

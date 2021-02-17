@@ -76,7 +76,14 @@ class BackendMqttHass(IoTBackendBase):
                     self.mqtt_client.publish(state_topic, val, retain= True)
 
         elif "binary-sensors" in thing.conf:
-          
+            for entry in data:
+                if entry in self.state_topics:
+                    val = data[entry]
+                    state_topic = self.state_topics[entry]
+                    self.logger.debug("new mqtt value for %s : %s", state_topic, val)
+                    self.mqtt_client.publish(state_topic, val, retain= True)
+
+        elif "covers" in thing.conf:
             for entry in data:
                 if entry in self.state_topics:
                     val = data[entry]
@@ -177,9 +184,9 @@ class BackendMqttHass(IoTBackendBase):
                                 "payload_off": self.config["payload_off"],
                                 "state_on": self.config["payload_on"],
                                 "state_off": self.config["payload_off"],
-                                "optimistic": "false"
-                                # qos: 0
-                                # retain: true
+                                "optimistic": "false",
+                                #"qos": 0,
+                                #"retain": true
                             }
                             payload = json.dumps(conf_dict)
 
@@ -247,6 +254,71 @@ class BackendMqttHass(IoTBackendBase):
                     self.logger.error(
                         "error announcing sensor: %s", exception)
   
+            elif "covers" in device.conf:
+                # get list of covers on device
+                covers = device.conf["covers"]
+                # create a state topic for everyone
+                try:
+                    cover_cfg = device.conf["covers"]
+                    for cover in covers:
+                        self.logger.info("MQTT announcing cover %s", cover)
+                        try:
+                            sconf = cover_cfg[cover]
+                            config_topic = "{}/cover/{}/{}/config".format(
+                                self.config["hass_discovery_prefix"],
+                                sconf["unique_id"], cover)
+                            state_topic = "{}/cover/{}/state".format(
+                                self.config["hass_discovery_prefix"],
+                                sconf["unique_id"])
+                            avail_topic = "{}/cover/{}/avail".format(
+                                self.config["hass_discovery_prefix"],
+                                sconf["unique_id"])
+                            command_topic = "{}/cover/{}/command".format(
+                                self.config["hass_discovery_prefix"],
+                                sconf["unique_id"])
+                            self.avail_topics.append(avail_topic)
+                            self.state_topics[cover] = state_topic
+                            conf_dict = {
+                                "name": sconf["name"],
+                                "unique_id": sconf["unique_id"],
+                                "state_topic": state_topic,
+                                "availability_topic": avail_topic,
+                                "command_topic": command_topic,
+                                "value_template": "{{ value_json." + cover + " }}",
+                                "payload_available": self.config["online_payload"],
+                                "payload_not_available": self.config["offline_payload"],
+                                "state_open": self.config["state_open"],
+                                "state_opening": self.config["state_opening"],
+                                "state_closed": self.config["state_closed"],
+                                "state_closing": self.config["state_closing"],
+                                "payload_open": self.config["payload_open"],
+                                "payload_close": self.config["payload_close"],
+                                "payload_stop": self.config["payload_stop"],
+                                "optimistic": "false"
+                            }
+                            payload = json.dumps(conf_dict)
+                            self.logger.info("publishing: %s", payload)
+                            result = self.mqtt_client.publish(
+                                config_topic, payload, retain=True)
+                            result = self.mqtt_client.publish(
+                                avail_topic, self.config["online_payload"], retain=True)
+
+                            # now subscribe to the command topic
+                            (result, _) = self.mqtt_client.subscribe(
+                                command_topic)
+                            self.logger.info(
+                                "subscription result: %s", result)
+                            self.command_topics[command_topic] = [
+                                device, cover, state_topic
+                            ]
+                            
+                        except Exception as exception:
+                            self.logger.error("problem bringing cover %s up: %s",
+                                              cover, exception)
+                except Exception as exception:
+                    self.logger.error(
+                        "error announcing cover: %s", exception)
+
             else:
                 self.logger.error( "announce(): unknown device type %s", device.conf )
 

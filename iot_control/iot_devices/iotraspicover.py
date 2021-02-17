@@ -92,24 +92,24 @@ class IoTraspicover(IoTDeviceBase):
         GPIO.setwarnings(False)
 
         if "state_open" in self.conf:
-            state_open= self.conf["state_open"]
+            self.state_open= self.conf["state_open"]
         if "state_opening" in self.conf:
-            state_opening= self.conf["state_opening"] 
+            self.state_opening= self.conf["state_opening"] 
         if "state_closed" in self.conf:
-            state_closed= self.conf["state_closed"]
+            self.state_closed= self.conf["state_closed"]
         if "state_closing" in self.conf:
-            state_closing= self.conf["state_closing"]
+            self.state_closing= self.conf["state_closing"]
         if "state_unknown" in self.conf:
-            state_unknown= self.conf["state_unknown"]
+            self.state_unknown= self.conf["state_unknown"]
 
-        self.translate_status[IoTraspicover.STATE_OPEN]= state_open
-        self.translate_status[IoTraspicover.STATE_OPENING]= state_opening
-        self.translate_status[IoTraspicover.STATE_CLOSED]= state_closed
-        self.translate_status[IoTraspicover.STATE_CLOSING]= state_closing
-        self.translate_status[IoTraspicover.STATE_STOPPED_OPENING]= state_unknown
-        self.translate_status[IoTraspicover.STATE_STOPPED_CLOSING]= state_unknown
-        self.translate_status[IoTraspicover.STATE_UNKNOWN]= state_unknown
-        self.translate_status[IoTraspicover.STATE_ILLEGAL]= state_unknown
+        self.translate_status[IoTraspicover.STATE_OPEN]= self.state_open
+        self.translate_status[IoTraspicover.STATE_OPENING]= self.state_opening
+        self.translate_status[IoTraspicover.STATE_CLOSED]= self.state_closed
+        self.translate_status[IoTraspicover.STATE_CLOSING]= self.state_closing
+        self.translate_status[IoTraspicover.STATE_STOPPED_OPENING]= self.state_unknown
+        self.translate_status[IoTraspicover.STATE_STOPPED_CLOSING]= self.state_unknown
+        self.translate_status[IoTraspicover.STATE_UNKNOWN]= self.state_unknown
+        self.translate_status[IoTraspicover.STATE_ILLEGAL]= self.state_unknown
                          
         covers_cfg = setupdata["covers"]
 

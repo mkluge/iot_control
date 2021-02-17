@@ -79,8 +79,8 @@ class IoTraspigpio(IoTDeviceBase):
                             self.handle[msg].cancel()
                             self.handle[msg]= None
                 else:
-                  # unknown event
-                  pass
+                    # unknown event
+                    pass
                     
         return True
 

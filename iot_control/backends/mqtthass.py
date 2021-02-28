@@ -59,23 +59,20 @@ class BackendMqttHass(IoTBackendBase):
         self.mqtt_client.loop_stop()
 
     def workon(self, device: IoTDeviceBase, data: Dict):
-        print( "BackendMqttHass.workon() device ", device )
-        print( "    state_topics: ", self.state_topics )
-        
+
         if not device in self.state_topics:
             self.logger.error("unknown device")
             return
-        
-        state_topics= self.state_topics[device]
-        
+
+        state_topics = self.state_topics[device]
+
         if "sensors" in device.conf:
             for entry in data:
-                print( "  entry ", entry )
                 if entry in state_topics:
                     val = {entry: data[entry]}
                     state_topic = state_topics[entry]
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
-                    self.mqtt_client.publish(state_topic, json.dumps(val), retain= True)
+                    self.mqtt_client.publish(state_topic, json.dumps(val), retain=True)
 
         elif "switches" in device.conf:
             for entry in data:
@@ -83,7 +80,7 @@ class BackendMqttHass(IoTBackendBase):
                     val = data[entry]
                     state_topic = state_topics[entry]
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
-                    self.mqtt_client.publish(state_topic, val, retain= True)
+                    self.mqtt_client.publish(state_topic, val, retain=True)
 
         elif "binary-sensors" in device.conf:
             for entry in data:
@@ -91,7 +88,7 @@ class BackendMqttHass(IoTBackendBase):
                     val = data[entry]
                     state_topic = state_topics[entry]
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
-                    self.mqtt_client.publish(state_topic, val, retain= True)
+                    self.mqtt_client.publish(state_topic, val, retain=True)
 
         elif "covers" in device.conf:
             for entry in data:
@@ -99,19 +96,17 @@ class BackendMqttHass(IoTBackendBase):
                     val = data[entry]
                     state_topic = state_topics[entry]
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
-                    self.mqtt_client.publish(state_topic, val, retain= True)
+                    self.mqtt_client.publish(state_topic, val, retain=True)
 
         else:
-            self.logger.error("workon(): unknown device type %s", device.conf )
+            self.logger.error("workon(): unknown device type %s", device.conf)
 
 
     def announce(self):
 
-        print("BackendMqttHass.announce()")
         for device in self.devices:
-            print("    device: ", device )
 
-            state_topics= {}
+            state_topics = {}
 
             # is it a sensor or a switch
             if "sensors" in device.conf:
@@ -206,7 +201,8 @@ class BackendMqttHass(IoTBackendBase):
 
                             self.logger.info("publishing: %s", payload)
                             self.mqtt_client.publish(config_topic, payload, retain=True)
-                            self.mqtt_client.publish(avail_topic, self.config["online_payload"], retain=True)
+                            self.mqtt_client.publish(avail_topic,
+                                                     self.config["online_payload"], retain=True)
 
                             # now subscribe to the command topic
                             (result, _) = self.mqtt_client.subscribe(
@@ -267,7 +263,7 @@ class BackendMqttHass(IoTBackendBase):
                 except Exception as exception:
                     self.logger.error(
                         "error announcing sensor: %s", exception)
-  
+
             elif "covers" in device.conf:
                 # get list of covers on device
                 covers = device.conf["covers"]
@@ -325,7 +321,7 @@ class BackendMqttHass(IoTBackendBase):
                             self.command_topics[command_topic] = [
                                 device, cover, state_topic
                             ]
-                            
+
                         except Exception as exception:
                             self.logger.error("problem bringing cover %s up: %s",
                                               cover, exception)
@@ -334,10 +330,10 @@ class BackendMqttHass(IoTBackendBase):
                         "error announcing cover: %s", exception)
 
             else:
-                self.logger.error( "announce(): unknown device type %s", device.conf )
+                self.logger.error("announce(): unknown device type %s", device.conf)
 
             # finally add device's state topics list to permanent list
-            self.state_topics[device]= state_topics
+            self.state_topics[device] = state_topics
 
     # The callback for when the client receives a CONNACK response from the server.
 
@@ -365,13 +361,14 @@ class BackendMqttHass(IoTBackendBase):
 
         if msg.topic == "homeassistant/status":
             if msg.payload == b'online':
-                self.logger.info( "Home Assistant came online" )
+                self.logger.info("Home Assistant came online")
                 # no need to re-announce myself to home assistant here because the retained 
                 # announcement messages will take care of this in a much nicer way
             elif msg.payload == b'offline':
-                self.logger.info( "Home Assistant went offline" )
+                self.logger.info("Home Assistant went offline")
             else:
-                self.logger.info( "unexpected home assistant status message: %s %s", msg.topic, msg.payload )
+                self.logger.info("unexpected home assistant status "
+                                 "message: %s %s", msg.topic, msg.payload)
 
     def mqtt_callback_disconnect(self, client, userdata, rc):
         """ mqtt callback when the client gets disconnected

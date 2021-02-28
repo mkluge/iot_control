@@ -58,46 +58,60 @@ class BackendMqttHass(IoTBackendBase):
         self.mqtt_client.disconnect()
         self.mqtt_client.loop_stop()
 
-    def workon(self, thing: IoTDeviceBase, data: Dict):
-        if "sensors" in thing.conf:
+    def workon(self, device: IoTDeviceBase, data: Dict):
+        print( "BackendMqttHass.workon() device ", device )
+        print( "    state_topics: ", self.state_topics )
+        
+        if not device in self.state_topics:
+            self.logger.error("unknown device")
+            return
+        
+        state_topics= self.state_topics[device]
+        
+        if "sensors" in device.conf:
             for entry in data:
-                if entry in self.state_topics:
+                print( "  entry ", entry )
+                if entry in state_topics:
                     val = {entry: data[entry]}
-                    state_topic = self.state_topics[entry]
+                    state_topic = state_topics[entry]
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
                     self.mqtt_client.publish(state_topic, json.dumps(val), retain= True)
 
-        elif "switches" in thing.conf:
+        elif "switches" in device.conf:
             for entry in data:
-                if entry in self.state_topics:
+                if entry in state_topics:
                     val = data[entry]
-                    state_topic = self.state_topics[entry]
+                    state_topic = state_topics[entry]
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
                     self.mqtt_client.publish(state_topic, val, retain= True)
 
-        elif "binary-sensors" in thing.conf:
+        elif "binary-sensors" in device.conf:
             for entry in data:
-                if entry in self.state_topics:
+                if entry in state_topics:
                     val = data[entry]
-                    state_topic = self.state_topics[entry]
+                    state_topic = state_topics[entry]
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
                     self.mqtt_client.publish(state_topic, val, retain= True)
 
-        elif "covers" in thing.conf:
+        elif "covers" in device.conf:
             for entry in data:
-                if entry in self.state_topics:
+                if entry in state_topics:
                     val = data[entry]
-                    state_topic = self.state_topics[entry]
+                    state_topic = state_topics[entry]
                     self.logger.debug("new mqtt value for %s : %s", state_topic, val)
                     self.mqtt_client.publish(state_topic, val, retain= True)
 
         else:
-            self.logger.error("workon(): unknown device type %s", thing.conf )
+            self.logger.error("workon(): unknown device type %s", device.conf )
 
 
     def announce(self):
 
+        print("BackendMqttHass.announce()")
         for device in self.devices:
+            print("    device: ", device )
+
+            state_topics= {}
 
             # is it a sensor or a switch
             if "sensors" in device.conf:
@@ -120,7 +134,7 @@ class BackendMqttHass(IoTBackendBase):
                                 self.config["hass_discovery_prefix"],
                                 sconf["unique_id"])
                             self.avail_topics.append(avail_topic)
-                            self.state_topics[sensor] = state_topic
+                            state_topics[sensor] = state_topic
                             conf_dict = {
                                 "device_class": sconf["device_class"],
                                 "name": sconf["name"],
@@ -170,7 +184,7 @@ class BackendMqttHass(IoTBackendBase):
                                 self.config["hass_discovery_prefix"],
                                 sconf["unique_id"])
                             self.avail_topics.append(avail_topic)
-                            self.state_topics[switch] = state_topic
+                            state_topics[switch] = state_topic
                             conf_dict = {
                                 "name": sconf["name"],
                                 "unique_id": sconf["unique_id"],
@@ -230,7 +244,7 @@ class BackendMqttHass(IoTBackendBase):
                                 self.config["hass_discovery_prefix"],
                                 sconf["unique_id"])
                             self.avail_topics.append(avail_topic)
-                            self.state_topics[sensor] = state_topic
+                            state_topics[sensor] = state_topic
                             conf_dict = {
                                 "device_class": sconf["device_class"],
                                 "name": sconf["name"],
@@ -277,7 +291,7 @@ class BackendMqttHass(IoTBackendBase):
                                 self.config["hass_discovery_prefix"],
                                 sconf["unique_id"])
                             self.avail_topics.append(avail_topic)
-                            self.state_topics[cover] = state_topic
+                            state_topics[cover] = state_topic
                             conf_dict = {
                                 "name": sconf["name"],
                                 "unique_id": sconf["unique_id"],
@@ -321,6 +335,9 @@ class BackendMqttHass(IoTBackendBase):
 
             else:
                 self.logger.error( "announce(): unknown device type %s", device.conf )
+
+            # finally add device's state topics list to permanent list
+            self.state_topics[device]= state_topics
 
     # The callback for when the client receives a CONNACK response from the server.
 

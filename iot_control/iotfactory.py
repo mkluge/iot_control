@@ -37,9 +37,9 @@ class IoTFactory:
 
         # if there is a '%' in the device class then ignore the remainder,
         # this allows multiple devices of the same class
-        pos= name.find("%")
+        pos = name.find("%")
         if -1 != pos:
-            name= name[0:pos]
+            name = name[0:pos]
 
         if name not in cls.device_registry:
             raise SystemExit(

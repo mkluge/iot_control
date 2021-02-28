@@ -16,7 +16,7 @@ class IoTFactory:
 
     # internal registry for device classes
     device_registry = {}
-    # internal registry fpr backends
+    # internal registry for backends
     backend_registry = {}
 
     @ classmethod
@@ -34,6 +34,12 @@ class IoTFactory:
     def create_device(cls, name: str, **kwargs) -> 'IoTDeviceBase':
         """ Factory command to create the device.
         """
+
+        # if there is a '%' in the device class then ignore the remainder,
+        # this allows multiple devices of the same class
+        pos= name.find("%")
+        if -1 != pos:
+            name= name[0:pos]
 
         if name not in cls.device_registry:
             raise SystemExit(

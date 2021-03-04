@@ -8,6 +8,7 @@ This project provides a framework to easily connect IoT devices (sensors and swi
 * [BH1750](https://www.amazon.de/AZDelivery-GY-302-Helligkeitsensor-Arduino-Raspberry/dp/B07QBPRZH1/ref=sr_1_1_sspa?dchild=1&keywords=bh1750&qid=1609321202&sr=8-1-spons&psc=1&spLa=ZW5jcnlwdGVkUXVhbGlmaWVyPUEyVkI3SDNHSzFYRFFRJmVuY3J5cHRlZElkPUEwNjExNjQwM1NBR1dFMVJSNE01UyZlbmNyeXB0ZWRBZElkPUEwOTg0NzIxVklHUFVDSE8zQkIzJndpZGdldE5hbWU9c3BfYXRmJmFjdGlvbj1jbGlja1JlZGlyZWN0JmRvTm90TG9nQ2xpY2s9dHJ1ZQ==): illuminance
 * [Raspberry PI GPIO switches](https://learn.sparkfun.com/tutorials/raspberry-gpio/all): drive GPIO pins on the raspberry pi. To actually drive the pins you need to use the mqtt-hass backend.
 * Shell command switches: run shell commands when a switch is clicked in Home Assistant. Has an 'on' and an 'off' command.
+* Raspberry PI cover for garage doors or covers as defined by Home Assistant. It uses two input pins to detect the closed or opened state of the cover and one output pin which triggers a pulse so that the garage door motor is put into action.
 
 ## Supported backends:
 

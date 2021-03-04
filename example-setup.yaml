@@ -97,3 +97,18 @@ raspi-binary-sensor:
         unique_id: "button2"
         device_class: window  # device class according to https://www.home-assistant.io/integrations/binary_sensor/#device-class
         pin: 18 # PIN as GPIO number, not board number
+  raspi-cover:
+    payload_open: "OPEN"
+    payload_close: "CLOSE"
+    payload_stop: "STOP"
+    state_open: "open" # optional
+    state_closed: "closed" #optional
+    state_closing: "closing" #optional
+    state_unknown: "unknown" #optional
+    covers:
+      garage:
+        name: Testgarage
+        unique_id: "testgarage"
+        pin_down: 14 # input pin which reads closed when the cover is open/up
+        pin_up: 18 # input pin which reads closed when the cover is closed/down
+        pin_trigger: 26 # output pin which triggers motor controller

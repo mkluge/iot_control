@@ -81,10 +81,9 @@ class BackendInfluxDB(IoTBackendBase):
                         template[0]["time"] = "{}".format(datetime.datetime.utcnow())
                         template[0]["fields"][entry] = float( data[entry] )
                         self.influx.write_points(template)
-            except influxdb.exceptions.InfluxDBServerError as error:
-                self.logger.info("InfluxDBServerError %s", error )
+            except Exception as error:
+                self.logger.info("Exception %s", error )
                 self.influx = None
-
 
     def announce(self):
         for device in self.devices:

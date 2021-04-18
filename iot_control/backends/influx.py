@@ -64,22 +64,29 @@ class BackendInfluxDB(IoTBackendBase):
         self.logger.info("shutdown influxdb")
         self.influx.close()
 
-    def workon(self, thing: IoTDeviceBase, data: Dict):
+    def workon(self, device: IoTDeviceBase, data: Dict):
 
         if None == self.influx:
             self.logger.info("Influx connection not present, try to reconnect '%s'", self.config['database'] )
             self.__connect()
 
+        if not device in self.json_templates:
+            self.logger.error("unknown device")
+            return
+
+        json_templates= self.json_templates[device]
+
         if None != self.influx:
             try:
                 for entry in data:
                     # send to influx db
-                    if entry in self.json_templates:
+                    if entry in json_templates:
                         self.logger.debug("influx data for field %s with value %s",
                                         entry, data[entry])
-                        template = self.json_templates[entry]
+                        template= json_templates[entry]
                         template[0]["time"] = "{}".format(datetime.datetime.utcnow())
                         template[0]["fields"][entry] = float( data[entry] )
+                        print( "    ", template )
                         self.influx.write_points(template)
             except Exception as error:
                 self.logger.info("Exception %s", error )
@@ -87,6 +94,9 @@ class BackendInfluxDB(IoTBackendBase):
 
     def announce(self):
         for device in self.devices:
+
+            json_templates= {}
+
             # is it a sensor or a switch
             if "sensors" in device.conf:
                 # get list of sensors on device
@@ -109,7 +119,7 @@ class BackendInfluxDB(IoTBackendBase):
                                     }
                                 },
                             ]
-                            self.json_templates[sensor] = json_template
+                            json_templates[sensor] = json_template
                         except Exception as exception:
                             self.logger.error("config for sensor %s wrong: %s",
                                               sensor, exception)
@@ -119,3 +129,6 @@ class BackendInfluxDB(IoTBackendBase):
                 # it is a switch
                 # - not supported here
                 pass
+
+            # finally add device's state topics list to permanent list
+            self.json_templates[device] = json_templates

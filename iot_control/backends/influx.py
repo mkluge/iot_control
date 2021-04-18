@@ -86,7 +86,6 @@ class BackendInfluxDB(IoTBackendBase):
                         template= json_templates[entry]
                         template[0]["time"] = "{}".format(datetime.datetime.utcnow())
                         template[0]["fields"][entry] = float( data[entry] )
-                        print( "    ", template )
                         self.influx.write_points(template)
             except Exception as error:
                 self.logger.info("Exception %s", error )

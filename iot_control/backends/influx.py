@@ -23,32 +23,38 @@ class BackendInfluxDB(IoTBackendBase):
     """
     devices = []
     json_templates = {}
+    influx = None
+
+    def __connect(self):
+        self.logger.info("connecting to influxdb")
+        self.influx = influxdb.InfluxDBClient(host=self.config['server'],
+                                              port=self.config['port'],
+                                              username=self.config['user'],
+                                              password=self.config['password'],
+                                              database=self.config['database'])
+
 
     def __init__(self, **kwargs):
         super().__init__()
         self.logger = logging.getLogger('iot_control')
-        config = kwargs.get("config", None)
-        self.config = config
-        self.logger.info("connecting to influxdb")
-        self.influx = influxdb.InfluxDBClient(host=config['server'],
-                                              port=config['port'],
-                                              username=config['user'],
-                                              password=config['password'],
-                                              database=config['database'])
+        self.config = kwargs.get("config", None)
+
+        self.__connect()
+
         list= [db['name'] for db in self.influx.get_list_database()]
         #list= self.influx.get_list_database()
-        self.logger.debug( "Connected to InfluxDB %s:%s", config['server'], config['port'] )
+        self.logger.debug( "Connected to InfluxDB %s:%s", self.config['server'], self.config['port'] )
         self.logger.debug( "    Existing databases:" )
         for l in list:
             self.logger.debug( "        '%s'", l )
 
-        if config['database'] not in list:
-            self.logger.info( "Create new Influx database '%s'", config['database'] )
-            self.influx.create_database( config['database'] )
+        if self.config['database'] not in list:
+            self.logger.info( "Create new Influx database '%s'", self.config['database'] )
+            self.influx.create_database( self.config['database'] )
         else:
-            self.logger.debug( "Influx database '%s' already present", config['database'] )
-    
-  
+            self.logger.debug( "Influx database '%s' already present", self.config['database'] )
+
+
     def register_device(self, device: IoTDeviceBase) -> None:
         """ register a device with the backend
         """
@@ -58,19 +64,38 @@ class BackendInfluxDB(IoTBackendBase):
         self.logger.info("shutdown influxdb")
         self.influx.close()
 
-    def workon(self, thing: IoTDeviceBase, data: Dict):
-        for entry in data:
-            # send to influx db
-            if entry in self.json_templates:
-                self.logger.debug("influx data for field %s with value %s",
-                                  entry, data[entry])
-                template = self.json_templates[entry]
-                template[0]["time"] = "{}".format(datetime.datetime.utcnow())
-                template[0]["fields"][entry] = float( data[entry] )
-                self.influx.write_points(template)
+    def workon(self, device: IoTDeviceBase, data: Dict):
+
+        if None == self.influx:
+            self.logger.info("Influx connection not present, try to reconnect '%s'", self.config['database'] )
+            self.__connect()
+
+        if not device in self.json_templates:
+            self.logger.error("unknown device")
+            return
+
+        json_templates= self.json_templates[device]
+
+        if None != self.influx:
+            try:
+                for entry in data:
+                    # send to influx db
+                    if entry in json_templates:
+                        self.logger.debug("influx data for field %s with value %s",
+                                        entry, data[entry])
+                        template= json_templates[entry]
+                        template[0]["time"] = "{}".format(datetime.datetime.utcnow())
+                        template[0]["fields"][entry] = float( data[entry] )
+                        self.influx.write_points(template)
+            except Exception as error:
+                self.logger.info("Exception %s", error )
+                self.influx = None
 
     def announce(self):
         for device in self.devices:
+
+            json_templates= {}
+
             # is it a sensor or a switch
             if "sensors" in device.conf:
                 # get list of sensors on device
@@ -93,7 +118,7 @@ class BackendInfluxDB(IoTBackendBase):
                                     }
                                 },
                             ]
-                            self.json_templates[sensor] = json_template
+                            json_templates[sensor] = json_template
                         except Exception as exception:
                             self.logger.error("config for sensor %s wrong: %s",
                                               sensor, exception)
@@ -103,3 +128,6 @@ class BackendInfluxDB(IoTBackendBase):
                 # it is a switch
                 # - not supported here
                 pass
+
+            # finally add device's state topics list to permanent list
+            self.json_templates[device] = json_templates

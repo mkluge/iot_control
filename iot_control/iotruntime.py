@@ -115,8 +115,10 @@ class IoTRuntime:
         self.logger.debug("iotruntime.regular_update()")
         for device in self.devices:
             data = device.read_data()
-            for backend in self.backends:
-                backend.workon(device, data)
+            
+            if data:
+                for backend in self.backends:
+                    backend.workon(device, data)
 
         # reschedule myself for next time
         loop.call_later(self.update_intervall,

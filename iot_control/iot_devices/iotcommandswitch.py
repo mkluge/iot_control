@@ -27,6 +27,12 @@ class IoTcommandswitch(IoTDeviceBase):
         if not "switches" in setupdata:
             raise IoTConfigError(
                 "missing switches in setup data")
+        if not "payload_on" in setupdata:
+            raise IoTConfigError(
+                "missing payload_on in setup data")
+        if not "payload_off" in setupdata:
+            raise IoTConfigError(
+                "missing payload_off in setup data")
         for switch in self.conf["switches"]:
             sw_cfg = self.conf["switches"][switch]
             if not "on_command" in sw_cfg:

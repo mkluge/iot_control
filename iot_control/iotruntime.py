@@ -11,6 +11,7 @@ import asyncio
 import functools
 import signal
 import yaml
+import unittest
 import iot_control.iot_devices.iotads1115
 import iot_control.iot_devices.iotbme280
 import iot_control.iot_devices.iotbh1750
@@ -34,21 +35,7 @@ class IoTRuntime:
     loop = None
 
     def __init__(self, configfile: str, log_level=logging.WARNING):
-
-        self.logger = logging.getLogger('iot_control')
-        self.logger.setLevel(log_level)
-        filehandler = logging.FileHandler('iot_control.log')
-        filehandler.setLevel(log_level)
-        self.logger.addHandler(filehandler)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        filehandler.setFormatter(formatter)
-        self.logger.addHandler(filehandler)
-        # logger.debug('Debug-Nachricht')
-        # logger.info('Info-Nachricht')
-        # logger.warning('Warnhinweis')
-        # logger.error('Fehlermeldung')
-        # logger.critical('Schwerer Fehler')
+        self.setup_logging(log_level)
 
         self.logger.info("loading config file %s", configfile)
         with open(configfile, 'r') as stream:
@@ -59,7 +46,10 @@ class IoTRuntime:
                 self.logger.critical(
                     "Unable to parse configuration file %s", configfile)
                 sys.exit(1)
-        # first: build backends
+        self.create_backends()
+        self.connect_devices()
+
+    def create_backends(self):
         for backend in self.conf["backends"]:
             self.logger.info("creating backend %s", backend)
             backend_cfg = self.conf["backends"][backend]
@@ -69,11 +59,11 @@ class IoTRuntime:
             except Exception as exception:
                 self.logger.error(
                     "error creating backend: %s", exception)
-        sys.stdout.flush()
         if not self.backends:
             self.logger.critical("no backends available")
             sys.exit(1)
-            # second: register devices with backend
+
+    def connect_devices(self):
         for device in self.conf["devices"]:
             self.logger.info("creating device %s", device)
             device_cfg = self.conf["devices"][device]
@@ -89,6 +79,17 @@ class IoTRuntime:
                     "error creating device: %s", exception)
         for backend in self.backends:
             backend.announce()
+
+    def setup_logging(self, log_level):
+        self.logger = logging.getLogger('iot_control')
+        self.logger.setLevel(log_level)
+        filehandler = logging.FileHandler('iot_control.log')
+        filehandler.setLevel(log_level)
+        self.logger.addHandler(filehandler)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        filehandler.setFormatter(formatter)
+        self.logger.addHandler(filehandler)
 
     def set_intervall(self, new_intervall: int):
         """ sets the intervall between two readings of the sensors
@@ -115,7 +116,7 @@ class IoTRuntime:
         self.logger.debug("iotruntime.regular_update()")
         for device in self.devices:
             data = device.read_data()
-            
+
             if data:
                 for backend in self.backends:
                     backend.workon(device, data)
@@ -137,10 +138,9 @@ class IoTRuntime:
                 data = device.read_data()
                 backend.workon(device, data)
 
-
-    def __schedule_from_local_thread(self,delay,device,switch,event):
-        """ private helper method to schedule a future event from the local thread 
-            (the thread belonging to the event loop) and pass the handle for the 
+    def __schedule_from_local_thread(self, delay, device, switch, event):
+        """ private helper method to schedule a future event from the local thread
+            (the thread belonging to the event loop) and pass the handle for the
             delayed event back to the device
 
         Args:
@@ -151,10 +151,11 @@ class IoTRuntime:
 
         """
 
-        handle= self.loop.call_later(delay,functools.partial(IoTRuntime.scheduled_update,self,device,switch,event))
-        device.give_scheduled_event_handle(handle,switch)
-    
-    def schedule_for_device(self,delay,device,switch,event):
+        handle = self.loop.call_later(delay, functools.partial(
+            IoTRuntime.scheduled_update, self, device, switch, event))
+        device.give_scheduled_event_handle(handle, switch)
+
+    def schedule_for_device(self, delay, device, switch, event):
         """ Schedule an event for a device, mainly to be used with
             mqtt
 
@@ -165,18 +166,20 @@ class IoTRuntime:
             event (str): which text to send
 
         """
-        
+
         if self.loop is None:
-            self.logger.error("no event loop created, must not call 'IoTRuntime.schedule_for_device()' yet")
+            self.logger.error(
+                "no event loop created, must not call 'IoTRuntime.schedule_for_device()' yet")
             return None
-       
-        # this may look strange but needs to be that way! This function 'schedule_for_device()' is likely called 
-        # from other threads such as an MQTT handler. That's why 'call_soon_threadsafe()' is scheduling the 
-        # following step in the thread of the main event loop soon. And then 'call_later(delay,...)' get's
+
+        # this may look strange but needs to be that way! This function 'schedule_for_device()'
+        # is likely called from other threads such as an MQTT handler. That's why
+        # 'call_soon_threadsafe()' is scheduling the following step in the thread of the main
+        # event loop soon. And then 'call_later(delay,...)' get's
         # properly scheduled over there in the thread of the main event loop.
         self.loop.call_soon_threadsafe(
-            functools.partial(IoTRuntime.__schedule_from_local_thread,self,delay,device,switch,event))
-        
+            functools.partial(IoTRuntime.__schedule_from_local_thread, self, delay, device, switch, event))
+
     def triggered_update(self, device):
         """ handler for trigger_for_device(), call from the main event handler
 
@@ -189,7 +192,7 @@ class IoTRuntime:
             data = device.read_data()
             backend.workon(device, data)
 
-    def trigger_for_device(self,device):
+    def trigger_for_device(self, device):
         """ Act on notification by a device, like schedule_for_device() but without a delay,
             it makes the runtime call workon() for this device, mainly to be used with mqtt
 
@@ -197,13 +200,15 @@ class IoTRuntime:
             device (IOTdevicebase): the device
         """
         if self.loop is None:
-            self.logger.error("no event loop created, must not call 'IoTRuntime.schedule_for_device()' yet")
+            self.logger.error(
+                "no event loop created, must not call 'IoTRuntime.schedule_for_device()' yet")
             return None
-       
+
         # This get's (most likely) called from another thread such as a GPIO callback thread but
         # not the thread where self.loop lives in. Therefore, the following call makes self.loop()
         # to call self.trigger_for_device() soon inside the thread of self.loop
-        self.loop.call_soon_threadsafe(functools.partial(IoTRuntime.triggered_update,self,device))
+        self.loop.call_soon_threadsafe(functools.partial(
+            IoTRuntime.triggered_update, self, device))
 
     def loop_forever(self):
         """ the main loop of the runtime
@@ -232,3 +237,13 @@ class IoTRuntime:
 
         for backend in self.backends:
             backend.shutdown()
+
+
+class IoTruntimetest(unittest.TestCase):
+    def test_missing_config(self):
+        with self.assertRaises("IoTerror"):
+            IoTRuntime("not_existsing_file.xzy")
+
+
+if __name__ == '__main__':
+    unittest.main()

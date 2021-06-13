@@ -6,6 +6,7 @@
 
 from typing import Dict
 import os
+import unittest
 from iot_control.iotdevicebase import IoTDeviceBase, IoTConfigError
 from iot_control.iotfactory import IoTFactory
 
@@ -23,6 +24,9 @@ class IoTcommandswitch(IoTDeviceBase):
         super().__init__()
         setupdata = kwargs.get("config")
         self.conf = setupdata
+        if not "switches" in setupdata:
+            raise IoTConfigError(
+                "missing switches in setup data")
         for switch in self.conf["switches"]:
             sw_cfg = self.conf["switches"][switch]
             if not "on_command" in sw_cfg:
@@ -63,3 +67,24 @@ class IoTcommandswitch(IoTDeviceBase):
 
     def shutdown(self, _) -> None:
         """ nothing to do """
+
+
+class IoTcommandswitchTest(unittest.TestCase):
+    def test_missing_switches(self):
+        config = {"off_command": 0}
+        with self.assertRaises(IoTConfigError):
+            f = IoTcommandswitch(config=config)
+
+    def test_missing_on_command(self):
+        config = {"switches": {"test": {"off_command": 0}}}
+        with self.assertRaises(IoTConfigError):
+            f = IoTcommandswitch(config=config)
+
+    def test_missing_off_command(self):
+        config = {"switches": {"test": {"on_command": 1}}}
+        with self.assertRaises(IoTConfigError):
+            f = IoTcommandswitch(config=config)
+
+
+if __name__ == '__main__':
+    unittest.main()

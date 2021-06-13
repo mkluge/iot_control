@@ -24,19 +24,15 @@ class IoTbme280(IoTDeviceBase):
         self.port = setupdata["port"]
         self.address = setupdata["i2c_address"]
 
-        self.logger= logging.getLogger("iot_control")
-
+        self.logger = logging.getLogger("iot_control")
 
     def read_data(self) -> Dict:
         """ read data """
 
-        val= {}
-
-        count= 3
-        while 0 < count :
-
-            try: 
-
+        val = {}
+        count = 3
+        while 0 < count:
+            try:
                 with smbus2.SMBus(self.port) as bus:
                     calibration_params = bme280.load_calibration_params(
                         bus, self.address)
@@ -46,26 +42,27 @@ class IoTbme280(IoTDeviceBase):
                         "humidity": "{:.1f}".format(data.humidity),
                         "pressure": "{:.1f}".format(data.pressure)
                     }
-            except OSError as error :  
+            except OSError as error:
                 self.logger.info("OSError: %s", error)
 
             if val:
                 break
 
             count -= 1
-            self.logger.error("Could not read new value, try %s more time(s)", count)
+            self.logger.error(
+                "Could not read new value, try %s more time(s)", count)
 
         return val
 
     def read_data_new(self) -> Dict:
         """ read data from BME280 sensor in a robust way"""
 
-        val= {}
+        val = {}
 
-        count= 5
-        while 0 < count :
+        count = 5
+        while 0 < count:
 
-            try: 
+            try:
 
                 with smbus2.SMBus(self.port) as bus:
                     calibration_params = bme280.load_calibration_params(
@@ -76,17 +73,17 @@ class IoTbme280(IoTDeviceBase):
                         "humidity": "{:.1f}".format(data.humidity),
                         "pressure": "{:.1f}".format(data.pressure)
                     }
-            except OSError as error :  
+            except OSError as error:
                 self.logger.info("OSError: %s", error)
 
             if val:
                 break
 
             count -= 1
-            self.logger.error("Could not read new value, try %s more time(s)", count)
+            self.logger.error(
+                "Could not read new value, try %s more time(s)", count)
 
         return val
-
 
     def sensor_list(self) -> list:
         return ["temperature", "humidity", "pressure"]

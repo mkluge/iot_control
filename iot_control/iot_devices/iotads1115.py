@@ -5,9 +5,14 @@
 """
 
 from typing import Dict
+from time import sleep
 from iot_control.iotdevicebase import IoTDeviceBase
 from iot_control.iotfactory import IoTFactory
-from iot_control.iot_devices.external.ADS1x15 import ADS1115
+import board
+import busio
+import adafruit_ads1x15.ads1115 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
+
 
 
 @IoTFactory.register_device("ads1115")
@@ -19,15 +24,14 @@ class IoTads1115(IoTDeviceBase):
         super().__init__()
         setupdata = kwargs.get("config")
         self.conf = setupdata
-        # Import the ADS1115 module.
-        self.adc = ADS1115()
 
     def read_data(self) -> Dict:
-        """ read data """
-        # Start ADC conversions on channel 0
-        self.adc.start_adc(0, gain=1)
-        value = self.adc.get_last_result()
-        self.adc.stop_adc()
+        i2c = busio.I2C(board.SCL, board.SDA)
+        ads = ADS.ADS1115(i2c)
+        value = 0
+        while not value:
+            chan = AnalogIn(ads, ADS.P0)
+            value = chan.value
         value = float(value)*4.096/32768.0
         val = {
             "feuchte": "{:.2f}".format(value),

@@ -1,0 +1,88 @@
+# name for the sensors in the tree
+name: str()
+# backends
+backends:
+  mqtt_hass: include('mqtt_hass', required=False)
+  influx: include('influx', required=False)
+# devices
+devices:
+  command-switch: include('command-switch', required=False)
+  raspi-gpio: include('raspi-gpio', required=False)
+  ads1115: include('ads1115', required=False)
+  bh1750: include('bh1750', required=False)
+  bme280: include('bme280', required=False)
+---
+mqtt_hass:
+  server: ip()
+  port: int()
+  user: str()
+  password: str()
+  hass_discovery_prefix: str()
+  online_payload: str()
+  offline_payload: str()
+  payload_off: str()
+  payload_on: str()
+---
+influx:
+  server: ip()
+  port: int()
+  user: str()
+  password: str()
+  database: str()
+---
+command-switch:
+  payload_off: str()
+  payload_on: str()
+  names:
+    beamer:
+      name: str()
+      unique_id: str()
+      on_command: str()
+      off_command: str()
+---
+raspi-gpio:
+  payload_off: str()
+  payload_on: str()
+  names: map(include('raspi_switch'))
+---
+raspi_switch:
+  name: str()
+  unique_id: str()
+  pin: int()
+---
+ads1115:
+  sensors: map(include('ads_sensor'))
+---
+ads_sensor:
+  device_class: str()
+  name: str()
+  unique_id: str()
+  unit_of_measurement: str()
+  expire_after: int()
+---
+bh1750:
+  port: int()
+  i2c_address: int()
+  sensors: map(include('bh1750_sensor'))
+---
+bh1750_sensor:
+  device_class: str()
+  name: str()
+  unique_id: str()
+  unit_of_measurement: str()
+  expire_after: int()
+---
+bme280:
+  port: int()
+  i2c_address: int()
+  sensors:
+    humidity: include('bme280_sensor')
+    temperature: include('bme280_sensor')
+    pressure: include('bme280_sensor')
+---
+bme280_sensor:
+  device_class: str()
+  name: str()
+  unique_id: str()
+  unit_of_measurement: str()
+  expire_after: int()

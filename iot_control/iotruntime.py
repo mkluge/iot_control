@@ -22,6 +22,7 @@ import iot_control.iot_devices.iotraspicover
 import iot_control.backends.influx
 import iot_control.backends.mqtthass
 from iot_control.iotfactory import IoTFactory
+import yamale
 
 
 class IoTRuntime:
@@ -39,6 +40,12 @@ class IoTRuntime:
         self.setup_logging(log_level)
 
         self.logger.info("loading config file %s", configfile)
+        # validate config file
+        schema = yamale.make_schema("schema.yaml")
+        data = yamale.make_data(configfile)
+        # Validate data against the schema. Throws a ValueError if data is invalid.
+        yamale.validate(schema, data)
+        # load config file
         with open(configfile, "r") as stream:
             try:
                 self.conf = yaml.load(stream, Loader=yaml.SafeLoader)

@@ -3,25 +3,30 @@ from typing import NamedTuple
 
 import paho.mqtt.client as mqtt
 from influxdb import InfluxDBClient
+import json
 
 INFLUXDB_ADDRESS = '192.168.178.104'
-INFLUXDB_USER = ''
-INFLUXDB_PASSWORD = ''
-INFLUXDB_DATABASE = 'home_assistant'
+INFLUXDB_USER = 'admin'
+INFLUXDB_PASSWORD = '12gamma3'
+INFLUXDB_DATABASE = 'tasmota_daten'
 
 MQTT_ADDRESS = '192.168.178.104'
 MQTT_USER = ''
 MQTT_PASSWORD = ''
-MQTT_TOPIC = 'home/+/+'
-MQTT_REGEX = 'home/([^/]+)/([^/]+)'
+MQTT_TOPIC = 'tasmota/discovery/+/sensors'
+MQTT_REGEX = 'tasmota/discovery/([^/]+)//sensors'
 MQTT_CLIENT_ID = 'MQTTInfluxDBBridge'
 
 influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, 8086, INFLUXDB_USER, INFLUXDB_PASSWORD, None)
 
 class SensorData(NamedTuple):
     location: str
-    measurement: str
-    value: float
+    total_in: float
+    power_cur: float
+    power_p1: float
+    power_p2: float
+    power_p3: float
+    total_out: float
 
 def on_connect(client, userdata, flags, rc):
     """ The callback for when the client receives a CONNACK response from the server."""
@@ -32,22 +37,22 @@ def _parse_mqtt_message(topic, payload):
     match = re.match(MQTT_REGEX, topic)
     if match:
         location = match.group(1)
-        measurement = match.group(2)
-        if measurement == 'status':
-            return None
-        return SensorData(location, measurement, float(payload))
+        data = json.loads(payload)
+        return SensorData( location, data["sn"]["MT174"]["Total_in"], data["sn"]["MT174"]["Power_cur"], data["sn"]["MT174"]["Power_p1"], data["sn"]["MT174"]["Power_p2"], data["sn"]["MT174"]["Power_p3"], data["sn"]["MT174"]["Total_out"])
     else:
         return None
 
-def _send_sensor_data_to_influxdb(sensor_data):
+def _send_sensor_data_to_influxdb(sensor_data: SensorData):
     json_body = [
         {
-            'measurement': sensor_data.measurement,
-            'tags': {
-                'location': sensor_data.location
-            },
+            'measurement': sensor_data.location,
             'fields': {
-                'value': sensor_data.value
+                'total_in': sensor_data.total_in,
+                'power_cur': sensor_data.power_cur,
+                'power_p1': sensor_data.power_p1,
+                'power_p2': sensor_data.power_p2,
+                'power_p3': sensor_data.power_p3,
+                'total_out': sensor_data.total_out
             }
         }
     ]

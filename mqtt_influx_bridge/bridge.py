@@ -30,25 +30,26 @@ def _parse_mqtt_message(topic, payload):
 
 def _send_sensor_data_to_influxdb(sensor_data: dict):
     # only send, if new data > last data
-    keys = sensor_data.keys()
-    for key in keys:
+    transmit_data={}
+    for key in sensor_data.keys():
         if key in LAST_DATA:
             diff = sensor_data[key]-LAST_DATA[key]
             LAST_DATA[key]=sensor_data[key]
-            if diff==0.0:
-                del sensor_data[key]
+            if diff<=0.0:
+                continue
+            transmit_data[key]=sensor_data[key]
         else:
             # do not send first data point
             LAST_DATA[key]=sensor_data[key]
-            del sensor_data[key]
-    json_body = [
-        {
-            'measurement': "MT174",
-            'fields': sensor_data
-        }
-    ]
-    print(json.dumps(json_body))
-    print(influxdb_client.write_points(json_body))
+    if transmit_data.keys():
+        json_body = [
+            {
+                'measurement': "MT174",
+                'fields': sensor_data
+            }
+        ]
+        print(json.dumps(json_body))
+        print(influxdb_client.write_points(json_body))
 
 def on_message(client, userdata, msg):
     """The callback for when a PUBLISH message is received from the server."""

@@ -32,6 +32,8 @@ def _send_sensor_data_to_influxdb(sensor_data: dict):
     # only send, if new data > last data
     transmit_data={}
     for key in sensor_data.keys():
+        if type(sensor_data[key])==str:
+            continue
         if key in LAST_DATA:
             diff = sensor_data[key]-LAST_DATA[key]
             LAST_DATA[key]=sensor_data[key]

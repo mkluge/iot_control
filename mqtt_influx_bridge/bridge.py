@@ -13,20 +13,11 @@ INFLUXDB_DATABASE = 'tasmota_daten'
 MQTT_ADDRESS = '192.168.178.104'
 MQTT_USER = ''
 MQTT_PASSWORD = ''
-MQTT_TOPIC = 'tasmota/discovery/+/sensors'
-MQTT_REGEX = 'tasmota/discovery/([^/]+)//sensors'
+MQTT_TOPIC = 'tele/+/SENSOR'
 MQTT_CLIENT_ID = 'MQTTInfluxDBBridge'
+LAST_DATA={}
 
 influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, 8086, INFLUXDB_USER, INFLUXDB_PASSWORD, None)
-
-class SensorData(NamedTuple):
-    location: str
-    total_in: float
-    power_cur: float
-    power_p1: float
-    power_p2: float
-    power_p3: float
-    total_out: float
 
 def on_connect(client, userdata, flags, rc):
     """ The callback for when the client receives a CONNACK response from the server."""
@@ -34,29 +25,30 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe(MQTT_TOPIC)
 
 def _parse_mqtt_message(topic, payload):
-    match = re.match(MQTT_REGEX, topic)
-    if match:
-        location = match.group(1)
-        data = json.loads(payload)
-        return SensorData( location, data["sn"]["MT174"]["Total_in"], data["sn"]["MT174"]["Power_cur"], data["sn"]["MT174"]["Power_p1"], data["sn"]["MT174"]["Power_p2"], data["sn"]["MT174"]["Power_p3"], data["sn"]["MT174"]["Total_out"])
-    else:
-        return None
+    data = json.loads(payload)
+    return data["MT174"]
 
-def _send_sensor_data_to_influxdb(sensor_data: SensorData):
+def _send_sensor_data_to_influxdb(sensor_data: dict):
+    # only send, if new data > last data
+    keys = sensor_data.keys()
+    for key in keys:
+        if key in LAST_DATA:
+            diff = sensor_data[key]-LAST_DATA[key]
+            LAST_DATA[key]=sensor_data[key]
+            if diff==0.0:
+                del sensor_data[key]
+        else:
+            # do not send first data point
+            LAST_DATA[key]=sensor_data[key]
+            del sensor_data[key]
     json_body = [
         {
-            'measurement': sensor_data.location,
-            'fields': {
-                'total_in': sensor_data.total_in,
-                'power_cur': sensor_data.power_cur,
-                'power_p1': sensor_data.power_p1,
-                'power_p2': sensor_data.power_p2,
-                'power_p3': sensor_data.power_p3,
-                'total_out': sensor_data.total_out
-            }
+            'measurement': "MT174",
+            'fields': sensor_data
         }
     ]
-    influxdb_client.write_points(json_body)
+    print(json.dumps(json_body))
+    print(influxdb_client.write_points(json_body))
 
 def on_message(client, userdata, msg):
     """The callback for when a PUBLISH message is received from the server."""

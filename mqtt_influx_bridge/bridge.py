@@ -3,6 +3,7 @@ from typing import NamedTuple
 
 import paho.mqtt.client as mqtt
 from influxdb import InfluxDBClient
+from time import time
 import json
 
 INFLUXDB_ADDRESS = '192.168.178.104'
@@ -16,6 +17,7 @@ MQTT_PASSWORD = ''
 MQTT_TOPIC = 'tele/+/SENSOR'
 MQTT_CLIENT_ID = 'MQTTInfluxDBBridge'
 LAST_DATA={}
+TIME_DATA={}
 
 influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, 8086, INFLUXDB_USER, INFLUXDB_PASSWORD, None)
 
@@ -31,23 +33,31 @@ def _parse_mqtt_message(topic, payload):
 def _send_sensor_data_to_influxdb(sensor_data: dict):
     # only send, if new data > last data
     transmit_data={}
+    now = time()
     for key in sensor_data.keys():
         if type(sensor_data[key])==str:
             continue
         if key in LAST_DATA:
             diff = sensor_data[key]-LAST_DATA[key]
+            last_time = TIME_DATA[key]
+            time_diff = now - last_time
+            # diff is in KWh and time diff in seconds
+            # calculate avg. Watts
+            # KWh to Ws is *1000 and *3600
+            factor = 1000 * 3600 / time_diff
             LAST_DATA[key]=sensor_data[key]
-#            if diff<=0.0:
-#                continue
+            TIME_DATA[key]=now
             transmit_data[key]=sensor_data[key]
+            transmit_data[key+"_wattavg"]=diff*factor
         else:
             # do not send first data point
             LAST_DATA[key]=sensor_data[key]
+            TIME_DATA[key]=now
     if transmit_data.keys():
         json_body = [
             {
                 'measurement': "MT174",
-                'fields': sensor_data
+                'fields': transmit_data
             }
         ]
         print(json.dumps(json_body))

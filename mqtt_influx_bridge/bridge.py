@@ -37,8 +37,8 @@ def _send_sensor_data_to_influxdb(sensor_data: dict):
         if key in LAST_DATA:
             diff = sensor_data[key]-LAST_DATA[key]
             LAST_DATA[key]=sensor_data[key]
-            if diff<=0.0:
-                continue
+#            if diff<=0.0:
+#                continue
             transmit_data[key]=sensor_data[key]
         else:
             # do not send first data point

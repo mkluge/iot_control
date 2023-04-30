@@ -27,7 +27,10 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe(MQTT_TOPIC)
 
 def _parse_mqtt_message(topic, payload):
-    data = json.loads(payload)
+    try:
+        data = json.loads(payload)
+    except json.decoder.JSONDecodeError:
+        return None
     return data["MT174"]
 
 def _send_sensor_data_to_influxdb(sensor_data: dict):
@@ -41,14 +44,18 @@ def _send_sensor_data_to_influxdb(sensor_data: dict):
             diff = sensor_data[key]-LAST_DATA[key]
             last_time = TIME_DATA[key]
             time_diff = now - last_time
+            # ignore zeros
+            if sensor_data[key] == 0.0:
+                continue
             # diff is in KWh and time diff in seconds
             # calculate avg. Watts
             # KWh to Ws is *1000 and *3600
             factor = 1000 * 3600 / time_diff
             LAST_DATA[key]=sensor_data[key]
             TIME_DATA[key]=now
-            transmit_data[key]=sensor_data[key]
-            transmit_data[key+"_wattavg"]=diff*factor
+            if diff>=0:
+                transmit_data[key]=sensor_data[key]
+                transmit_data[key+"_wattavg"]=diff*factor
         else:
             # do not send first data point
             LAST_DATA[key]=sensor_data[key]

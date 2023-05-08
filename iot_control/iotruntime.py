@@ -12,7 +12,7 @@ import functools
 import signal
 import yaml
 import unittest
-import iot_control.iot_devices.iotads1115
+#import iot_control.iot_devices.iotads1115
 import iot_control.iot_devices.iotbme280
 import iot_control.iot_devices.iotbh1750
 import iot_control.iot_devices.iotraspigpio

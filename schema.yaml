@@ -6,7 +6,7 @@ backends:
   influx: include('influx', required=False)
 # devices
 devices:
-  command-switch: include('command-switch', required=False)
+  command_switch: include('command-switch', required=False)
   raspi-gpio: include('raspi-gpio', required=False)
   ads1115: include('ads1115', required=False)
   bh1750: include('bh1750', required=False)

@@ -52,7 +52,7 @@ def main():
             m = re.search('var webdata_total_e = "(.*?)"', data)
             solar_data["kwh_total"] = float(m.groups()[0])
             m = re.search('var webdata_alarm = "(.*?)"', data)
-            if len(m.groups()[0]):
+            if not len(m.groups()[0]):
                 solar_data["alarm"] = 0
             else:
                 solar_data["alarm"] = 1

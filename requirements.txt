@@ -5,3 +5,4 @@ smbus2
 smbus
 paho-mqtt
 yamale
+beautifulsoup4

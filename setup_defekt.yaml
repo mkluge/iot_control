@@ -1,0 +1,32 @@
+# name for the sensors in the tree
+name: 'garden'
+# configure backends
+backends:
+  mqtt_hass:
+    server: '192.168.178.104'
+    port: 1883
+    user: ''
+    password: ''
+    # "homeassistant" is the standard value
+    hass_discovery_prefix: "homeassistant"
+    online_payload: "online"
+    offline_payload: "offline"
+    payload_off: "off"
+    payload_on: "on"
+  influx:
+    server: '192.168.178.104'
+    port: 8086
+    user: 'useyourown'
+    password: 'secret'
+    database: 'myhome'
+# configure devices
+devices:
+  command-switch:
+    payload_off: "off"
+    payload_on: "on"
+    names:
+      beamer:
+        name: Beamer
+        unique_id: "beamer_living_room"
+        on_command: "/usr/bin/irsend --device=/var/run/lirc/lircd-tx SEND_ONCE EPSON-TW6000 KEY_POWERUP"
+        off_command: "/usr/bin/irsend --device=/var/run/lirc/lircd-tx SEND_ONCE EPSON-TW6000 KEY_SUSPEND"

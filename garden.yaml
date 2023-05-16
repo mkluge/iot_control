@@ -1,0 +1,81 @@
+# name for the sensors in the tree
+name: 'garden'
+# configure backends
+backends:
+  mqtt_hass:
+    server: '192.168.178.104'
+    port: 1883
+    user: ''
+    password: ''
+    # "homeassistant" is the standard value
+    hass_discovery_prefix: "homeassistant"
+    online_payload: "online"
+    offline_payload: "offline"
+    payload_off: "off"
+    payload_on: "on"
+  influx:
+    server: '192.168.178.104'
+    port: 8086
+    user: 'mkluge'
+    password: '12gamma3'
+    database: 'apl19f'
+# configure devices
+devices:
+  raspi-gpio:
+    payload_off: "off"
+    payload_on: "on"
+    names:
+      relais-pumpe:
+        name: Relais Wasserpumpe Dachgarten
+        unique_id: "wasser_relais_dachgarten"
+        # PIN as GPIO number, not board number
+        pin: 27
+  ads1115:
+    sensors:
+      feuchte:
+        # an mqtt device class (required, if mqtt is used)
+        device_class: "voltage"
+        # (required)
+        name: "Feuchtesensor Dachgarten"
+        # the ID of the device. This is only to allow for separate topics for
+        # each device and is not used for the entity_id. The ID of the device
+        #  must only consist of characters from the character class [a-zA-Z0-9_-]
+        #  (alphanumerics, underscore and hyphen). (required)
+        unique_id: "feuchte_dachgarten"
+        # (required)
+        unit_of_measurement: "V"
+        # (required)
+        expire_after: 370
+  bh1750:
+    port: 1
+    i2c_address: 0x23
+    sensors:
+      illuminance:
+        device_class: "illuminance"
+        name: "Licht Dachgarten"
+        unique_id: "licht_dachgarten"
+        unit_of_measurement: "lx"
+        expire_after: 370
+  bme280:
+    port: 1
+    i2c_address: 0x76
+    sensors:
+      humidity:
+        # one of the supported MQTT components
+        device_class: "humidity"
+        name: "Luftfeuchte Dachgarten"
+        unique_id: "luftfeuchte_dachgarten"
+        unit_of_measurement: "%"
+        expire_after: 370
+      temperature:
+        device_class: "temperature"
+        name: "Temperatur Dachgarten"
+        unique_id: "temperatur_dachgarten"
+        unit_of_measurement: "°C"
+        expire_after: 370
+      pressure:
+        device_class: "pressure"
+        name: "Luftdruck Dachgarten"
+        unique_id: "luftdruck_dachgarten"
+        unit_of_measurement: "hPa"
+        expire_after: 370

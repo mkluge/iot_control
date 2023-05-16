@@ -14,7 +14,6 @@ INFLUXDB_DATABASE = 'strom'
 BASIC = HTTPBasicAuth('mkluge', '!0Alpha1')
 URL = "http://192.168.178.171/status.html"
 
-
 influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, 8086, INFLUXDB_USER, INFLUXDB_PASSWORD, None)
 
 def _init_influxdb_database():
@@ -31,7 +30,8 @@ def send_sensor_data_to_influxdb(solar_data: dict):
             'fields': solar_data
         }
     ]
-    influxdb_client.write_points(json_body)
+    if not influxdb_client.write_points(json_body):
+        _init_influxdb_database();
 
 def main():
     _init_influxdb_database()

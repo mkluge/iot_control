@@ -14,7 +14,8 @@ INFLUXDB_DATABASE = 'strom'
 MQTT_ADDRESS = '192.168.178.104'
 MQTT_USER = ''
 MQTT_PASSWORD = ''
-MQTT_TOPIC = 'tele/+/SENSOR'
+MQTT_TOPIC = 'tele/tasmota_09BDF1/SENSOR'
+#MQTT_TOPIC = '#'
 MQTT_CLIENT_ID = 'MQTTInfluxDBBridge'
 LAST_DATA={}
 TIME_DATA={}
@@ -29,46 +30,28 @@ def on_connect(client, userdata, flags, rc):
 def _parse_mqtt_message(topic, payload):
     try:
         data = json.loads(payload)
+        if isinstance(data,dict) and "GS303" in data:
+            return data["GS303"]
+        return None
     except json.decoder.JSONDecodeError:
         return None
-    return data["MT174"]
 
 def _send_sensor_data_to_influxdb(sensor_data: dict):
+#tele/tasmota_09BDF1/SENSOR = {"Time":"2023-06-18T15:22:20","GS303":{"Total_in":31.834,"Power_cur":-93,"Total_out":5.021,"Meter_id":"5a5041"}}'
     # only send, if new data > last data
+    diffKeys = ["Total_in","Total_out"]
     transmit_data={}
-    now = time()
-    for key in sensor_data.keys():
-        if type(sensor_data[key])==str:
-            continue
-        if key in LAST_DATA:
-            diff = sensor_data[key]-LAST_DATA[key]
-            last_time = TIME_DATA[key]
-            time_diff = now - last_time
-            # ignore zeros
-            if sensor_data[key] == 0.0:
-                continue
-            # diff is in KWh and time diff in seconds
-            # calculate avg. Watts
-            # KWh to Ws is *1000 and *3600
-            factor = 1000 * 3600 / time_diff
-            LAST_DATA[key]=sensor_data[key]
-            TIME_DATA[key]=now
-            if diff>=0:
-                transmit_data[key]=sensor_data[key]
-                transmit_data[key+"_wattavg"]=diff*factor
-        else:
-            # do not send first data point
-            LAST_DATA[key]=sensor_data[key]
-            TIME_DATA[key]=now
-    if transmit_data.keys():
-        json_body = [
-            {
-                'measurement': "MT174",
-                'fields': transmit_data
-            }
-        ]
-        print(json.dumps(json_body))
-        print(influxdb_client.write_points(json_body))
+    transmit_data["total_1"]=sensor_data["Total_in"]
+    transmit_data["total_out"]=sensor_data["Total_out"]
+    transmit_data["power_cur"]=float(sensor_data["Power_cur"])
+    json_body = [
+        {
+            'measurement': "MT174",
+            'fields': transmit_data
+        }
+    ]
+    print(json.dumps(json_body))
+    print(influxdb_client.write_points(json_body))
 
 def on_message(client, userdata, msg):
     """The callback for when a PUBLISH message is received from the server."""

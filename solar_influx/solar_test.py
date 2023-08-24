@@ -30,7 +30,15 @@ def send_sensor_data_to_influxdb(solar_data: dict):
             'fields': solar_data
         }
     ]
-    if not influxdb_client.write_points(json_body):
+    print(json_body)
+    print("writing")
+    try:
+        res = influxdb_client.write_points(json_body)
+    except Exception as X:
+        print(X)
+    print("res: " + res)
+    print("done")
+    if not res:
         _init_influxdb_database();
 
 def main():

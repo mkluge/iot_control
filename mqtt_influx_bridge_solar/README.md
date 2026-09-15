@@ -21,3 +21,12 @@ automatic restart. The app only makes outbound connections, so no ports need
 to be published. Use `docker logs -f mqtt-influx-bridge-solar` to inspect it.
 After changing the JSON file, restart the container with
 `docker restart mqtt-influx-bridge-solar` to load the new values.
+
+After changing `bridge.py`, rebuild the image and recreate the container:
+
+```sh
+docker build -t mqtt-influx-bridge-solar:latest .
+docker stop mqtt-influx-bridge-solar
+docker rm mqtt-influx-bridge-solar
+sh run.sh
+```

@@ -23,11 +23,27 @@ def _parse_mqtt_message(topic, payload):
             return None
     return None
 
+
+def _influx_fields(sensor_data):
+    fields = {}
+    for name, value in sensor_data.items():
+        if value is None:
+            continue
+        if isinstance(value, (dict, list)):
+            fields[name] = json.dumps(value, separators=(",", ":"))
+        else:
+            fields[name] = value
+    return fields
+
+
 def on_message(client, userdata, msg):
     sensor_data = _parse_mqtt_message(msg.topic, msg.payload.decode("utf-8"))
-    if sensor_data is not None:
+    if isinstance(sensor_data, dict):
+        fields = _influx_fields(sensor_data)
+        if not fields:
+            return
         userdata["influxdb_client"].write_points([
-            {"measurement": userdata["measurement"], "fields": sensor_data}
+            {"measurement": userdata["measurement"], "fields": fields}
         ])
 
 def _init_influxdb_database(client, database):

@@ -1,0 +1,18 @@
+{
+  "influxdb": {
+    "host": "192.168.178.104",
+    "port": 8086,
+    "user": "admin",
+    "password": "replace-with-influxdb-password",
+    "database": "strom",
+    "measurement": "MT174"
+  },
+  "mqtt": {
+    "host": "192.168.178.104",
+    "port": 1883,
+    "user": "",
+    "password": "",
+    "topic": "tele/tasmota_09BDF1/SENSOR",
+    "client_id": "MQTTInfluxDBBridge"
+  }
+}

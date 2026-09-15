@@ -1,100 +1,77 @@
-import re
-from typing import NamedTuple
+import json
+import os
 
 import paho.mqtt.client as mqtt
-from influxdb import InfluxDBClient
-from time import time
-import json
 import requests
+from influxdb import InfluxDBClient
 
-INFLUXDB_ADDRESS = '192.168.178.104'
-INFLUXDB_USER = 'admin'
-INFLUXDB_PASSWORD = '12gamma3'
-INFLUXDB_DATABASE = 'strom'
+def load_config():
+    config_path = os.environ.get("CONFIG_PATH", "/config/config.json")
+    with open(config_path, encoding="utf-8") as config_file:
+        return json.load(config_file)
 
-SOLAR_FLOW_SN='PO1HLEJLFC03388'
-SOLAR_FLOW_ACCOUNT='vollseil@mailbox.org'
-ZENDURE_URL='https://app.zendure.tech/v2/developer/api/apply'
+def on_connect(client, userdata, flags, reason_code, properties):
+    print("Connected with result code " + str(reason_code))
+    if reason_code == 0:
+        client.subscribe(userdata["topic"])
 
-
-MQTT_ADDRESS = ''
-MQTT_PORT = ''
-MQTT_USER = ''
-MQTT_PASSWORD = ''
-MQTT_TOPIC = ''
-MQTT_CLIENT_ID = 'MQTTInfluxDBBridgeSolar'
-
-influxdb_client = InfluxDBClient(INFLUXDB_ADDRESS, 8086, INFLUXDB_USER, INFLUXDB_PASSWORD, None)
-
-def on_connect(client, userdata, flags, rc):
-    global MQTT_TOPIC
-    """ The callback for when the client receives a CONNACK response from the server."""
-    print('Connected with result code ' + str(rc))
-    print(MQTT_TOPIC)
-    client.subscribe(MQTT_TOPIC)
-
-def _parse_mqtt_message(topic: str, payload):
+def _parse_mqtt_message(topic, payload):
     if topic.endswith("/state"):
-        print(payload)
         try:
-            data = json.loads(payload)
-            return data
-        except json.decoder.JSONDecodeError:
+            return json.loads(payload)
+        except json.JSONDecodeError:
             return None
-
-def _send_sensor_data_to_influxdb(sensor_data: dict):
-    json_body = [
-        {
-            'measurement': "solarflow",
-            'fields': sensor_data
-        }
-    ]
-#    print(json.dumps(json_body))
-    print(influxdb_client.write_points(json_body))
+    return None
 
 def on_message(client, userdata, msg):
-    """The callback for when a PUBLISH message is received from the server."""
-    #print(msg.topic + ' ' + str(msg.payload))
-    #print(userdata)
-    sensor_data = _parse_mqtt_message(msg.topic, msg.payload.decode('utf-8'))
+    sensor_data = _parse_mqtt_message(msg.topic, msg.payload.decode("utf-8"))
     if sensor_data is not None:
-        _send_sensor_data_to_influxdb(sensor_data)
+        userdata["influxdb_client"].write_points([
+            {"measurement": userdata["measurement"], "fields": sensor_data}
+        ])
 
-def _init_influxdb_database():
-    databases = influxdb_client.get_list_database()
-    if len(list(filter(lambda x: x['name'] == INFLUXDB_DATABASE, databases))) == 0:
-        influxdb_client.create_database(INFLUXDB_DATABASE)
-    influxdb_client.switch_database(INFLUXDB_DATABASE)
+def _init_influxdb_database(client, database):
+    databases = client.get_list_database()
+    if not any(item["name"] == database for item in databases):
+        client.create_database(database)
+    client.switch_database(database)
 
-def get_solarflow_data( account, serial):
-    r = requests.post( ZENDURE_URL, json={  
-        "snNumber": serial,
-        "account": account
-    })
-    if r.status_code!=200:
-        print("error getting data")
-    else:
-        return r.json()
+def get_solarflow_data(account, serial, url):
+    response = requests.post(url, json={"snNumber": serial, "account": account}, timeout=30)
+    response.raise_for_status()
+    return response.json()["data"]
 
 def main():
-    global MQTT_TOPIC
-    _init_influxdb_database()
-    solar_flow_data = get_solarflow_data( SOLAR_FLOW_ACCOUNT, SOLAR_FLOW_SN)
-    print(solar_flow_data)
-    MQTT_USER = solar_flow_data["data"]["appKey"]
-    MQTT_PASSWORD = solar_flow_data["data"]["secret"]
-    MQTT_ADDRESS = solar_flow_data["data"]["mqttUrl"]
-    MQTT_PORT = solar_flow_data["data"]["port"]
-    MQTT_TOPIC = MQTT_USER + "/#"
+    config = load_config()
+    influx = config["influxdb"]
+    solarflow = config["solarflow"]
+    mqtt_config = config["mqtt"]
 
-    mqtt_client = mqtt.Client(MQTT_CLIENT_ID)
-    mqtt_client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
+    influxdb_client = InfluxDBClient(
+        influx["host"], influx["port"], influx["user"], influx["password"], None
+    )
+    _init_influxdb_database(influxdb_client, influx["database"])
+
+    connection = get_solarflow_data(
+        solarflow["account"], solarflow["serial"], solarflow["api_url"]
+    )
+
+    mqtt_client = mqtt.Client(
+        mqtt.CallbackAPIVersion.VERSION2,
+        client_id=mqtt_config["client_id"],
+        userdata={
+            "topic": connection["appKey"] + "/#",
+            "measurement": influx["measurement"],
+            "influxdb_client": influxdb_client,
+        },
+    )
+    mqtt_client.username_pw_set(connection["appKey"], connection["secret"])
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
 
-    mqtt_client.connect(MQTT_ADDRESS, MQTT_PORT)
+    mqtt_client.connect(connection["mqttUrl"], int(connection["port"]))
     mqtt_client.loop_forever()
 
 if __name__ == '__main__':
-    print('MQTT to InfluxDB bridge Solar')
+    print("MQTT to InfluxDB bridge Solar")
     main()

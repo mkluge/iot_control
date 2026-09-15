@@ -1,0 +1,18 @@
+{
+  "influxdb": {
+    "host": "192.168.178.104",
+    "port": 8086,
+    "user": "admin",
+    "password": "replace-with-influxdb-password",
+    "database": "strom",
+    "measurement": "solarflow"
+  },
+  "solarflow": {
+    "serial": "replace-with-solarflow-serial",
+    "account": "replace-with-solarflow-account",
+    "api_url": "https://app.zendure.tech/v2/developer/api/apply"
+  },
+  "mqtt": {
+    "client_id": "MQTTInfluxDBBridgeSolar"
+  }
+}

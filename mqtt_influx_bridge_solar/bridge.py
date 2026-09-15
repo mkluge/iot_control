@@ -13,15 +13,27 @@ def load_config():
 def on_connect(client, userdata, flags, reason_code, properties):
     print("Connected with result code " + str(reason_code))
     if reason_code == 0:
-        client.subscribe(userdata["topic"])
+        for topic in userdata["topics"]:
+            client.subscribe(topic)
 
 def _parse_mqtt_message(topic, payload):
-    if topic.endswith("/state"):
-        try:
-            return json.loads(payload)
-        except json.JSONDecodeError:
+    if not (topic.endswith("/state") or topic.endswith("/properties/report")):
+        return None
+    try:
+        message = json.loads(payload)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(message, dict):
+        return None
+    if topic.endswith("/properties/report"):
+        properties = message.get("properties")
+        if not isinstance(properties, dict):
             return None
-    return None
+        sensor_data = properties.copy()
+        if "packData" in message:
+            sensor_data["packData"] = message["packData"]
+        return sensor_data
+    return message
 
 
 def _influx_fields(sensor_data):
@@ -36,15 +48,47 @@ def _influx_fields(sensor_data):
     return fields
 
 
+def _battery_points(sensor_data, measurement, device):
+    points = []
+    pack_data = sensor_data.get("packData")
+    if not isinstance(pack_data, list):
+        return points
+    for pack in pack_data:
+        if not isinstance(pack, dict) or not pack.get("sn"):
+            continue
+        fields = {
+            name: value for name, value in pack.items()
+            if name != "sn" and value is not None
+            and isinstance(value, (bool, int, float, str))
+        }
+        if fields:
+            points.append({
+                "measurement": measurement + "_battery",
+                "tags": {"device": device, "sn": str(pack["sn"])},
+                "fields": fields,
+            })
+    return points
+
+
 def on_message(client, userdata, msg):
-    sensor_data = _parse_mqtt_message(msg.topic, msg.payload.decode("utf-8"))
+    try:
+        payload = msg.payload.decode("utf-8")
+    except UnicodeDecodeError:
+        return
+    sensor_data = _parse_mqtt_message(msg.topic, payload)
     if isinstance(sensor_data, dict):
         fields = _influx_fields(sensor_data)
-        if not fields:
-            return
-        userdata["influxdb_client"].write_points([
-            {"measurement": userdata["measurement"], "fields": fields}
-        ])
+        topic_parts = msg.topic.strip("/").split("/")
+        device = topic_parts[1] if len(topic_parts) > 1 else "unknown"
+        points = _battery_points(sensor_data, userdata["measurement"], device)
+        if fields:
+            points.insert(0, {
+                "measurement": userdata["measurement"],
+                "tags": {"device": device},
+                "fields": fields,
+            })
+        if points:
+            userdata["influxdb_client"].write_points(points)
 
 def _init_influxdb_database(client, database):
     databases = client.get_list_database()
@@ -76,7 +120,10 @@ def main():
         mqtt.CallbackAPIVersion.VERSION2,
         client_id=mqtt_config["client_id"],
         userdata={
-            "topic": connection["appKey"] + "/#",
+            "topics": [
+                connection["appKey"] + "/#",
+                "/" + connection["appKey"] + "/#",
+            ],
             "measurement": influx["measurement"],
             "influxdb_client": influxdb_client,
         },

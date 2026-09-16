@@ -30,3 +30,28 @@ docker stop mqtt-influx-bridge-solar
 docker rm mqtt-influx-bridge-solar
 sh run.sh
 ```
+
+## Inspect all SolarFlow MQTT data
+
+`mqtt_test.py` obtains the MQTT credentials in the same way as the bridge and
+pretty-prints every retained or live message the broker permits the account to
+see. It first requests the broker-wide `#` wildcard and falls back to the two
+known SolarFlow account topic forms if the broker rejects that subscription.
+
+Install the existing Python dependencies, then run it from this directory:
+
+```sh
+python3 -m pip install -r requirements.txt
+python3 mqtt_test.py
+```
+
+Stop it with Ctrl-C, or make a time-limited capture (for example, 60 seconds):
+
+```sh
+python3 mqtt_test.py --seconds 60
+```
+
+Use `--config /path/to/config.json` to select another configuration. The script
+prints connection metadata and payloads, but never prints the temporary MQTT
+password. Non-JSON UTF-8 payloads are printed as strings and binary payloads as
+base64 so no reachable message content is discarded.

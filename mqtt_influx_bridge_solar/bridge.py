@@ -3,7 +3,8 @@ import os
 
 import paho.mqtt.client as mqtt
 import requests
-from influxdb import InfluxDBClient
+from influxdb_client import InfluxDBClient
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 def load_config():
     config_path = os.environ.get("CONFIG_PATH", "/config/config.json")
@@ -88,13 +89,11 @@ def on_message(client, userdata, msg):
                 "fields": fields,
             })
         if points:
-            userdata["influxdb_client"].write_points(points)
-
-def _init_influxdb_database(client, database):
-    databases = client.get_list_database()
-    if not any(item["name"] == database for item in databases):
-        client.create_database(database)
-    client.switch_database(database)
+            userdata["write_api"].write(
+                bucket=userdata["bucket"],
+                org=userdata["org"],
+                record=points,
+            )
 
 def get_solarflow_data(account, serial, url):
     response = requests.post(url, json={"snNumber": serial, "account": account}, timeout=30)
@@ -108,9 +107,9 @@ def main():
     mqtt_config = config["mqtt"]
 
     influxdb_client = InfluxDBClient(
-        influx["host"], influx["port"], influx["user"], influx["password"], None
+        url=influx["url"], token=influx["token"], org=influx["org"]
     )
-    _init_influxdb_database(influxdb_client, influx["database"])
+    write_api = influxdb_client.write_api(write_options=SYNCHRONOUS)
 
     connection = get_solarflow_data(
         solarflow["account"], solarflow["serial"], solarflow["api_url"]
@@ -125,7 +124,10 @@ def main():
                 "/" + connection["appKey"] + "/#",
             ],
             "measurement": influx["measurement"],
+            "bucket": influx["bucket"],
+            "org": influx["org"],
             "influxdb_client": influxdb_client,
+            "write_api": write_api,
         },
     )
     mqtt_client.username_pw_set(connection["appKey"], connection["secret"])

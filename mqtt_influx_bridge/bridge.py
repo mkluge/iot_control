@@ -2,7 +2,8 @@ import json
 import os
 
 import paho.mqtt.client as mqtt
-from influxdb import InfluxDBClient
+from influxdb_client import InfluxDBClient
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 
 def load_config():
@@ -38,19 +39,14 @@ def _influx_fields(sensor_data):
 def on_message(client, userdata, msg):
     sensor_data = _parse_mqtt_message(msg.payload.decode("utf-8"))
     if sensor_data is not None:
-        userdata["influxdb_client"].write_points([
-            {
+        userdata["write_api"].write(
+            bucket=userdata["bucket"],
+            org=userdata["org"],
+            record={
                 "measurement": userdata["measurement"],
                 "fields": _influx_fields(sensor_data),
-            }
-        ])
-
-
-def _init_influxdb_database(client, database):
-    databases = client.get_list_database()
-    if not any(item["name"] == database for item in databases):
-        client.create_database(database)
-    client.switch_database(database)
+            },
+        )
 
 
 def main():
@@ -59,9 +55,9 @@ def main():
     mqtt_config = config["mqtt"]
 
     influxdb_client = InfluxDBClient(
-        influx["host"], influx["port"], influx["user"], influx["password"], None
+        url=influx["url"], token=influx["token"], org=influx["org"]
     )
-    _init_influxdb_database(influxdb_client, influx["database"])
+    write_api = influxdb_client.write_api(write_options=SYNCHRONOUS)
 
     mqtt_client = mqtt.Client(
         mqtt.CallbackAPIVersion.VERSION2,
@@ -69,7 +65,10 @@ def main():
         userdata={
             "topic": mqtt_config["topic"],
             "measurement": influx["measurement"],
+            "bucket": influx["bucket"],
+            "org": influx["org"],
             "influxdb_client": influxdb_client,
+            "write_api": write_api,
         },
     )
     if mqtt_config["user"]:

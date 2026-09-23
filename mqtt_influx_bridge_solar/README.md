@@ -1,10 +1,9 @@
 # SolarFlow MQTT to InfluxDB bridge on Synology
 
-The container reads `/config/config.json` each time it starts. In this checkout,
+The container reads `/config/config.json` each time it starts and writes to InfluxDB 2 using token authentication. In this checkout,
 the local `config.json` contains the settings previously embedded in `bridge.py`;
 check and edit them for your Synology. On a fresh checkout, copy
-`config.example.json` to `config.json` and fill in the real values. The real
-config is ignored by Git and excluded from the Docker build context.
+`config.example.json` to `config.json` and fill in the real values. The `influxdb` section requires `url`, `org`, `bucket`, `token`, and `measurement`. Use a dedicated write-only token for the configured bucket. The real config is ignored by Git and excluded from the Docker build context.
 
 From this directory on the Synology, build and start the container:
 

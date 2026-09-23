@@ -1,10 +1,9 @@
 {
   "influxdb": {
-    "host": "192.168.178.104",
-    "port": 8086,
-    "user": "admin",
-    "password": "replace-with-influxdb-password",
-    "database": "strom",
+    "url": "http://192.168.178.85:8086",
+    "org": "plauen",
+    "bucket": "strom/autogen",
+    "token": "replace-with-dedicated-write-token",
     "measurement": "solarflow"
   },
   "solarflow": {

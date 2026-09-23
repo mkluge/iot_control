@@ -1,11 +1,10 @@
 # MQTT to InfluxDB bridge on Synology
 
-The container reads `/config/config.json` when it starts. The local
+The container reads `/config/config.json` when it starts and writes to InfluxDB 2 using token authentication. The local
 `config.json` carries the settings previously embedded in `bridge.py`. On a
 fresh checkout, copy `config.example.json` to `config.json` and fill in the
 real values. Check both the MQTT and InfluxDB host addresses from inside the
-container's network. The real config is ignored by Git and excluded from the
-Docker build context.
+container's network. The `influxdb` section requires `url`, `org`, `bucket`, `token`, and `measurement`. Use a dedicated write-only token for the configured bucket. The real config is ignored by Git and excluded from the Docker build context.
 
 From this directory on the Synology:
 

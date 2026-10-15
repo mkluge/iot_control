@@ -133,7 +133,7 @@ class IoTRuntime:
                         self.logger.error(error)
                 else:
                     self.logger.error(
-                        "unable to read data from device %s".format(device)
+                        "unable to read data from device %s", type(device).__name__
                     )
             except Exception as error:
                 self.logger.error("error reading device ".format(device))

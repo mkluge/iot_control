@@ -3,6 +3,6 @@ rpi.bme280
 influxdb
 smbus2
 smbus
-paho-mqtt
+paho-mqtt>=2.0
 yamale
 beautifulsoup4

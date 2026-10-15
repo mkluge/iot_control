@@ -33,7 +33,9 @@ class BackendMqttHass(IoTBackendBase):
         self.logger = logging.getLogger("iot_control")
         config = kwargs.get("config", None)
         self.config = config
-        self.mqtt_client = mqtt.Client(client_id="iot_control"+str(socket.gethostname()))
+        self.mqtt_client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2,
+            client_id="iot_control"+str(socket.gethostname()))
         self.mqtt_client.on_connect = self.mqtt_callback_connect
         self.mqtt_client.on_message = self.mqtt_callback_message
         self.mqtt_client.on_disconnect = self.mqtt_callback_disconnect
@@ -337,10 +339,13 @@ class BackendMqttHass(IoTBackendBase):
 
     # The callback for when the client receives a CONNACK response from the server.
 
-    def mqtt_callback_connect(self, client, userdata, flags, rc):
+    def mqtt_callback_connect(self, client, userdata, flags, reason_code, properties):
         """ callback as defined by the mqtt API for the moment
             when the connection is made
         """
+        if reason_code != 0:
+            self.logger.warning("MQTT connection failed: %s", reason_code)
+            return
         (result, _) = self.mqtt_client.subscribe("homeassistant/status")
         self.logger.info(
             "subscription result for homeassistant/status: %s", result)
@@ -370,8 +375,8 @@ class BackendMqttHass(IoTBackendBase):
                 self.logger.info("unexpected home assistant status "
                                  "message: %s %s", msg.topic, msg.payload)
 
-    def mqtt_callback_disconnect(self, client, userdata, rc):
+    def mqtt_callback_disconnect(self, client, userdata, flags, reason_code, properties):
         """ mqtt callback when the client gets disconnected
         """
-        if rc != 0:
-            self.logger.warning("Unexpected disconnection.")
+        if reason_code != 0:
+            self.logger.warning("Unexpected disconnection: %s", reason_code)
